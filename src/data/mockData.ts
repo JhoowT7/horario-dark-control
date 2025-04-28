@@ -1,15 +1,11 @@
 
-import { ContractType, Employee, ScheduleType, SystemSettings, TimeEntry } from "../types";
+import { Employee, SystemSettings, TimeEntry } from "@/types";
+import { v4 as uuidv4 } from "uuid";
 
-// Generate a unique ID
-const generateId = (): string => {
-  return Math.random().toString(36).substring(2, 9);
-};
-
-// Create some mock employees
+// Mock employees
 export const mockEmployees: Employee[] = [
   {
-    id: generateId(),
+    id: uuidv4(),
     name: "João Silva",
     registrationId: "EMP001",
     position: "Desenvolvedor",
@@ -30,14 +26,14 @@ export const mockEmployees: Employee[] = [
       lunchIn: "13:00",
       exit: "17:50"
     },
-    expectedMinutesPerDay: 8 * 60 - 10 // 8 hours - 10 minutes (7h50m)
+    expectedMinutesPerDay: 530 // 8 hours and 50 minutes
   },
   {
-    id: generateId(),
+    id: uuidv4(),
     name: "Maria Oliveira",
     registrationId: "EMP002",
     position: "Designer",
-    contractType: "Efetivado",
+    contractType: "Estagiário",
     scheduleType: "6x1",
     workDays: {
       0: false, // Sunday
@@ -52,70 +48,9 @@ export const mockEmployees: Employee[] = [
       entry: "09:00",
       lunchOut: "12:00",
       lunchIn: "13:00",
-      exit: "18:00"
-    },
-    expectedMinutesPerDay: 8 * 60 // 8 hours
-  },
-  {
-    id: generateId(),
-    name: "Pedro Santos",
-    registrationId: "EST001",
-    position: "Estagiário de Marketing",
-    contractType: "Estagiário",
-    scheduleType: "5x2",
-    workDays: {
-      0: false, // Sunday
-      1: true,  // Monday
-      2: true,  // Tuesday
-      3: true,  // Wednesday
-      4: true,  // Thursday
-      5: true,  // Friday
-      6: false  // Saturday
-    },
-    workSchedule: {
-      entry: "10:00",
-      lunchOut: "13:00",
-      lunchIn: "14:00",
       exit: "17:00"
     },
-    expectedMinutesPerDay: 6 * 60 // 6 hours
-  }
-];
-
-// Create mock time entries
-export const mockTimeEntries: TimeEntry[] = [
-  {
-    date: "2024-04-25",
-    employeeId: mockEmployees[0].id,
-    entry: "08:05",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "17:55",
-    workedMinutes: 7 * 60 + 50, // 7h50m
-    balanceMinutes: 0,
-    isHoliday: false
-  },
-  {
-    date: "2024-04-26",
-    employeeId: mockEmployees[0].id,
-    entry: "08:10",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "17:30",
-    workedMinutes: 7 * 60 + 20, // 7h20m
-    balanceMinutes: -20,
-    isHoliday: false
-  },
-  {
-    date: "2024-04-25",
-    employeeId: mockEmployees[1].id,
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:30",
-    workedMinutes: 8 * 60 + 30, // 8h30m
-    balanceMinutes: 30,
-    isHoliday: false
+    expectedMinutesPerDay: 420 // 7 hours
   }
 ];
 
@@ -123,5 +58,43 @@ export const mockTimeEntries: TimeEntry[] = [
 export const defaultSettings: SystemSettings = {
   toleranceMinutes: 5,
   maxExtraMinutes: 10,
-  holidays: ["2024-05-01", "2024-09-07", "2024-12-25"]
+  holidays: [
+    "2025-01-01", // New Year's Day
+    "2025-04-21", // Tiradentes Day
+    "2025-05-01", // Labor Day
+    "2025-09-07", // Independence Day
+    "2025-10-12", // Our Lady of Aparecida
+    "2025-11-02", // All Souls' Day
+    "2025-11-15", // Republic Proclamation Day
+    "2025-12-25"  // Christmas Day
+  ],
+  vacationPeriods: []
 };
+
+// Mock time entries
+export const mockTimeEntries: TimeEntry[] = [
+  {
+    date: "2025-04-28", // Example: Current date
+    employeeId: mockEmployees[0].id,
+    entry: "08:05",
+    lunchOut: "12:00",
+    lunchIn: "13:00",
+    exit: "17:55",
+    workedMinutes: 530,
+    balanceMinutes: 0,
+    isHoliday: false,
+    notes: "Dia normal de trabalho"
+  },
+  {
+    date: "2025-04-25", // Previous week
+    employeeId: mockEmployees[0].id,
+    entry: "08:00",
+    lunchOut: "12:00",
+    lunchIn: "13:10", // Returned 10 min late from lunch
+    exit: "18:10", // Stayed 20 min extra to compensate
+    workedMinutes: 540,
+    balanceMinutes: 10,
+    isHoliday: false,
+    notes: "Compensação pelo atraso no retorno do almoço"
+  }
+];

@@ -36,6 +36,7 @@ export interface TimeEntry {
   workedMinutes: number;
   balanceMinutes: number;
   isHoliday: boolean;
+  isVacation?: boolean;
   notes?: string;
 }
 
@@ -43,6 +44,13 @@ export interface SystemSettings {
   toleranceMinutes: number;
   maxExtraMinutes: number;
   holidays: string[]; // Array of dates in format YYYY-MM-DD
+  vacationPeriods: VacationPeriod[];
+}
+
+export interface VacationPeriod {
+  employeeId: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
 }
 
 export interface MonthlyBalance {

@@ -5,10 +5,11 @@ import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle, Calendar as CalendarCheck, Palmtree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { minutesToTime, generateBalanceMessage } from "@/utils/timeUtils";
-import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth, getYear, parseISO, isSameMonth } from "date-fns";
+import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth, getYear, parseISO, isSameMonth, isWithinInterval, isWeekend, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Tooltip,
@@ -23,11 +24,13 @@ interface TimeTrackingSummaryProps {
 }
 
 const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onSelectDate }) => {
-  const { timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, getAccumulatedBalance } = useAppContext();
+  const { timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, getAccumulatedBalance, isDateInVacation } = useAppContext();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [totalBalance, setTotalBalance] = useState(0);
   const [monthlyBalance, setMonthlyBalance] = useState(0);
   const [accumulatedBalance, setAccumulatedBalance] = useState(0);
+  const [missingEntries, setMissingEntries] = useState<string[]>([]);
+  const today = parseISO(getCurrentDate());
   
   // Get employee's time entries
   const employeeEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
@@ -35,10 +38,10 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   // Initialize with the current month
   useEffect(() => {
     // Set current month to today's date
-    setCurrentMonth(new Date());
+    setCurrentMonth(today);
   }, []);
   
-  // Calculate balances
+  // Calculate balances and missing entries
   useEffect(() => {
     // Monthly balance
     const monthString = format(currentMonth, "yyyy-MM");
@@ -62,6 +65,40 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     );
     
     setTotalBalance(currentMonthBalance);
+    
+    // Find missing entries
+    const daysInThisMonth = eachDayOfInterval({
+      start: startOfMonth(currentMonth),
+      end: endOfMonth(currentMonth)
+    });
+    
+    const missingDays: string[] = [];
+    
+    daysInThisMonth.forEach(day => {
+      // Skip future days
+      if (day > today) return;
+      
+      // Skip weekend days based on schedule type
+      if (!isWorkingDay(day)) return;
+      
+      // Skip holidays
+      if (isHolidayDate(day)) return;
+      
+      // Skip vacation days
+      const dateStr = format(day, "yyyy-MM-dd");
+      if (isDateInVacation(employee.id, dateStr)) return;
+      
+      // Check if entry exists
+      const hasEntry = currentMonthEntries.some(entry => 
+        entry.date === dateStr && (entry.entry || entry.isHoliday || entry.isVacation)
+      );
+      
+      if (!hasEntry) {
+        missingDays.push(dateStr);
+      }
+    });
+    
+    setMissingEntries(missingDays);
   }, [currentMonth, employeeEntries, employee.id, getMonthBalanceForEmployee, getAccumulatedBalance]);
   
   // Navigate to previous month
@@ -76,7 +113,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   
   // Go to current month
   const goToCurrentMonth = () => {
-    setCurrentMonth(new Date());
+    setCurrentMonth(today);
   };
   
   // Format the month title
@@ -101,6 +138,18 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   // Determine if a date is a working day for the employee
   const isWorkingDay = (date: Date) => {
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // For 5x2 schedule, only weekdays are working days
+    if (employee.scheduleType === "5x2") {
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    }
+    
+    // For 6x1 schedule, only Sunday is a non-working day
+    if (employee.scheduleType === "6x1") {
+      return dayOfWeek !== 0;
+    }
+    
+    // For custom schedule, check the employee's workDays
     return employee.workDays[dayOfWeek] === true;
   };
   
@@ -109,6 +158,14 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     const dateString = formatDateString(date);
     return settings.holidays.includes(dateString) || employeeEntries.some(
       entry => entry.date === dateString && entry.isHoliday
+    );
+  };
+  
+  // Check if a date is within vacation period
+  const isVacationDate = (date: Date) => {
+    const dateString = formatDateString(date);
+    return isDateInVacation(employee.id, dateString) || employeeEntries.some(
+      entry => entry.date === dateString && entry.isVacation
     );
   };
   
@@ -174,10 +231,20 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
         </p>
       </CardHeader>
       <CardContent>
+        {missingEntries.length > 0 && (
+          <Alert variant="destructive" className="mb-4 bg-negative/10 border-negative/20 text-white">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Existem {missingEntries.length} dia(s) sem registro neste mês. Dias não registrados serão contabilizados como ausência.
+            </AlertDescription>
+          </Alert>
+        )}
+      
         <Tabs defaultValue="month">
           <TabsList className="mb-4">
             <TabsTrigger value="month">Visão Mensal</TabsTrigger>
             <TabsTrigger value="list">Lista de Registros</TabsTrigger>
+            <TabsTrigger value="missing">Pendentes</TabsTrigger>
           </TabsList>
           
           <TabsContent value="month" className="space-y-4">
@@ -221,11 +288,13 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                 const entry = getEntryForDate(day);
                 const isWorkDay = isWorkingDay(day);
                 const isHoliday = isHolidayDate(day);
+                const isVacation = isVacationDate(day);
+                const isMissingEntry = missingEntries.includes(dateStr);
                 
                 // Determine day styling
                 let dayClass = "p-2 rounded-md transition-colors";
                 
-                if (!isWorkDay && !entry) {
+                if (!isWorkDay) {
                   dayClass += " text-gray-600 bg-transparent cursor-default";
                 } else if (isToday(day)) {
                   dayClass += " border border-cyanBlue/50";
@@ -233,7 +302,9 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                   dayClass += " hover:bg-gray-800 cursor-pointer";
                 }
                 
-                if (isHoliday) {
+                if (isVacation) {
+                  dayClass += " bg-cyanBlue/10";
+                } else if (isHoliday) {
                   dayClass += " bg-gray-800/50";
                 } else if (entry) {
                   if (entry.balanceMinutes > 0) {
@@ -243,6 +314,8 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                   } else {
                     dayClass += " bg-gray-800/30";
                   }
+                } else if (isMissingEntry) {
+                  dayClass += " bg-negative/5 border border-negative/20";
                 }
                 
                 return (
@@ -268,6 +341,18 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                         Feriado
                       </div>
                     )}
+                    
+                    {isVacation && (
+                      <div className="text-xs mt-1 text-cyanBlue/80">
+                        Férias
+                      </div>
+                    )}
+                    
+                    {isMissingEntry && !entry && (
+                      <div className="text-xs mt-1 text-negative">
+                        Pendente
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -287,6 +372,14 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                 <span className="text-gray-400">Feriado</span>
               </div>
               <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-cyanBlue/10 mr-1"></div>
+                <span className="text-gray-400">Férias</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-negative/5 border border-negative/20 mr-1"></div>
+                <span className="text-gray-400">Pendente</span>
+              </div>
+              <div className="flex items-center">
                 <div className="w-3 h-3 rounded-full border border-cyanBlue/50 mr-1"></div>
                 <span className="text-gray-400">Hoje</span>
               </div>
@@ -298,7 +391,10 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
               <div className="font-medium">Registros do Mês</div>
               <div className="text-sm text-gray-400">{formattedMonth}</div>
             </div>
-            {employeeEntries.length === 0 ? (
+            {employeeEntries.filter(entry => {
+              const entryDate = parseISO(entry.date);
+              return isSameMonth(entryDate, currentMonth);
+            }).length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Calendar className="mx-auto h-8 w-8 opacity-30 mb-2" />
                 <p>Nenhum registro de horas encontrado</p>
@@ -319,12 +415,16 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                     >
                       <div className="flex justify-between items-center">
                         <div>
-                          <div className="font-medium">
-                            {format(new Date(entry.date), "dd/MM/yyyy")} {entry.isHoliday && "(Feriado)"}
+                          <div className="font-medium flex items-center gap-2">
+                            {format(new Date(entry.date), "dd/MM/yyyy")}
+                            {entry.isHoliday && <Badge variant="outline">Feriado</Badge>}
+                            {entry.isVacation && <Badge variant="outline" className="bg-cyanBlue/10 text-cyanBlue border-cyanBlue/20">Férias</Badge>}
                           </div>
                           <div className="text-sm text-gray-400">
                             {entry.isHoliday ? (
                               "Feriado"
+                            ) : entry.isVacation ? (
+                              "Férias"
                             ) : entry.entry && entry.exit ? (
                               <>
                                 {entry.entry} - {entry.lunchOut || "-"} / {entry.lunchIn || "-"} - {entry.exit}
@@ -347,6 +447,45 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                             </span>
                           )}
                         </div>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="missing">
+            <div className="mb-4 flex justify-between items-center">
+              <div className="font-medium">Registros Pendentes</div>
+              <div className="text-sm text-gray-400">{formattedMonth}</div>
+            </div>
+            
+            {missingEntries.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <CheckCircle className="mx-auto h-8 w-8 opacity-30 mb-2" />
+                <p>Todos os dias deste mês estão registrados!</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {missingEntries
+                  .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+                  .map((dateStr) => (
+                    <button
+                      key={dateStr}
+                      className="w-full text-left bg-negative/5 hover:bg-negative/10 p-3 rounded-md transition-colors border border-negative/20"
+                      onClick={() => onSelectDate(dateStr)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {format(new Date(dateStr), "dd/MM/yyyy")}
+                            <Badge variant="destructive" className="bg-negative/20 text-negative border-none">Pendente</Badge>
+                          </div>
+                          <div className="text-sm text-negative/80">
+                            Clique para registrar este dia
+                          </div>
+                        </div>
+                        <AlertCircle className="text-negative h-5 w-5" />
                       </div>
                     </button>
                   ))}

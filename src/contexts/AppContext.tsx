@@ -1,9 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Employee, SystemSettings, TimeEntry, MonthlyBalance } from "../types";
+import { Employee, SystemSettings, TimeEntry, MonthlyBalance, VacationPeriod } from "../types";
 import { mockEmployees, mockTimeEntries, defaultSettings } from "../data/mockData";
 import { toast } from "@/components/ui/sonner";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO, isWithinInterval } from "date-fns";
 
 interface AppContextType {
   employees: Employee[];
@@ -22,9 +21,12 @@ interface AppContextType {
   updateSettings: (settings: SystemSettings) => void;
   addHoliday: (date: string) => void;
   removeHoliday: (date: string) => void;
+  addVacationPeriod: (vacationPeriod: VacationPeriod) => void;
+  removeVacationPeriod: (employeeId: string, startDate: string) => void;
   getCurrentDate: () => string;
   getMonthBalanceForEmployee: (employeeId: string, month: string) => number;
   getAccumulatedBalance: (employeeId: string) => number;
+  isDateInVacation: (employeeId: string, date: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,7 +40,7 @@ const MONTHLY_BALANCES_KEY = "timeTracker_monthlyBalances";
 // Helper to format today's date as YYYY-MM-DD
 const getTodayFormatted = () => {
   const date = new Date();
-  return date.toISOString().split("T")[0];
+  return format(date, "yyyy-MM-dd");
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -55,7 +57,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [settings, setSettings] = useState<SystemSettings>(() => {
     const storedSettings = localStorage.getItem(SETTINGS_KEY);
-    return storedSettings ? JSON.parse(storedSettings) : defaultSettings;
+    const parsedSettings = storedSettings ? JSON.parse(storedSettings) : defaultSettings;
+    // Make sure vacationPeriods exists
+    if (!parsedSettings.vacationPeriods) {
+      parsedSettings.vacationPeriods = [];
+    }
+    return parsedSettings;
   });
 
   const [monthlyBalances, setMonthlyBalances] = useState<MonthlyBalance[]>(() => {
@@ -124,6 +131,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Get current computer date
   const getCurrentDate = () => {
     return getTodayFormatted();
+  };
+  
+  // Check if a date is within an employee's vacation period
+  const isDateInVacation = (employeeId: string, date: string) => {
+    return settings.vacationPeriods.some(
+      period => period.employeeId === employeeId && 
+                isWithinInterval(parseISO(date), {
+                  start: parseISO(period.startDate),
+                  end: parseISO(period.endDate)
+                })
+    );
   };
   
   // Get monthly balance for an employee
@@ -217,6 +235,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.info(`${date} removido dos feriados`);
   };
   
+  // Vacation period operations
+  const addVacationPeriod = (vacationPeriod: VacationPeriod) => {
+    setSettings(prev => ({
+      ...prev,
+      vacationPeriods: [...prev.vacationPeriods, vacationPeriod]
+    }));
+    toast.success(`Período de férias adicionado para ${format(parseISO(vacationPeriod.startDate), "dd/MM/yyyy")} até ${format(parseISO(vacationPeriod.endDate), "dd/MM/yyyy")}`);
+  };
+  
+  const removeVacationPeriod = (employeeId: string, startDate: string) => {
+    setSettings(prev => ({
+      ...prev,
+      vacationPeriods: prev.vacationPeriods.filter(
+        period => !(period.employeeId === employeeId && period.startDate === startDate)
+      )
+    }));
+    toast.info(`Período de férias removido`);
+  };
+  
   const value = {
     employees,
     timeEntries,
@@ -234,9 +271,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSettings,
     addHoliday,
     removeHoliday,
+    addVacationPeriod,
+    removeVacationPeriod,
     getCurrentDate,
     getMonthBalanceForEmployee,
-    getAccumulatedBalance
+    getAccumulatedBalance,
+    isDateInVacation
   };
   
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

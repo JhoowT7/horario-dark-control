@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock, Palmtree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance, generateBalanceMessage } from "@/utils/timeUtils";
 import { parseISO, format, differenceInCalendarDays } from "date-fns";
@@ -19,7 +19,7 @@ interface TimeEntryFormProps {
 }
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack }) => {
-  const { timeEntries, addTimeEntry, settings, getCurrentDate } = useAppContext();
+  const { timeEntries, addTimeEntry, settings, getCurrentDate, isDateInVacation } = useAppContext();
   
   // Find existing entry for this employee and date
   const existingEntry = timeEntries.find(
@@ -32,6 +32,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   const [lunchIn, setLunchIn] = useState(existingEntry?.lunchIn || "");
   const [exit, setExit] = useState(existingEntry?.exit || "");
   const [isHoliday, setIsHoliday] = useState(existingEntry?.isHoliday || settings.holidays.includes(date));
+  const [isVacation, setIsVacation] = useState(existingEntry?.isVacation || isDateInVacation(employee.id, date));
   const [notes, setNotes] = useState(existingEntry?.notes || "");
   
   // Default time values from employee schedule (for easy copy)
@@ -55,6 +56,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   
   // Calculate worked hours when inputs change
   useEffect(() => {
+    if (isVacation) {
+      // Vacation days are neutral - no balance impact
+      setWorkedMinutes(0);
+      setBalanceMinutes(0);
+      setCalculationMessage("Férias: dia não contabilizado no banco de horas");
+      return;
+    }
+    
     if (isHoliday) {
       // Holiday calculations based on schedule type
       let holidayBalance = 0;
@@ -129,7 +138,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     } else {
       setCalculationMessage("Cálculo realizado normalmente");
     }
-  }, [entry, lunchOut, lunchIn, exit, isHoliday, employee, date, settings]);
+  }, [entry, lunchOut, lunchIn, exit, isHoliday, isVacation, employee, date, settings]);
   
   // Fill current time for today's entry
   const fillCurrentTime = (field: 'entry' | 'lunchOut' | 'lunchIn' | 'exit') => {
@@ -168,6 +177,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       workedMinutes,
       balanceMinutes,
       isHoliday,
+      isVacation,
       notes
     };
     
@@ -238,21 +248,33 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           </Button>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Switch 
-            id="holiday" 
-            checked={isHoliday} 
-            onCheckedChange={setIsHoliday} 
-          />
-          <Label htmlFor="holiday">Marcar como Feriado</Label>
-          {isHoliday && (
+        <div className="flex flex-col sm:flex-row items-center space-x-0 sm:space-x-4 space-y-2 sm:space-y-0">
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="holiday" 
+              checked={isHoliday} 
+              onCheckedChange={setIsHoliday} 
+            />
+            <Label htmlFor="holiday">Marcar como Feriado</Label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="vacation" 
+              checked={isVacation} 
+              onCheckedChange={setIsVacation} 
+            />
+            <Label htmlFor="vacation">Marcar como Férias</Label>
+          </div>
+          
+          {(isHoliday || isVacation) && (
             <Badge variant="outline" className="ml-auto bg-gray-800 text-gray-400">
-              Feriado
+              {isVacation ? "Férias" : "Feriado"}
             </Badge>
           )}
         </div>
         
-        {!isHoliday && (
+        {!isHoliday && !isVacation && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="entry" className="flex items-center justify-between">

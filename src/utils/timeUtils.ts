@@ -149,3 +149,45 @@ export const formatMonthToText = (monthString: string): string => {
   const date = new Date(parseInt(year), parseInt(month) - 1, 1);
   return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
+
+// Calculate work days in a month for an employee based on schedule type
+export const calculateWorkDaysInMonth = (
+  year: number, 
+  month: number, 
+  scheduleType: string, 
+  customWorkDays?: { [key: number]: boolean }
+): number => {
+  // First day of month
+  const startDate = new Date(year, month, 1);
+  // Last day of month
+  const endDate = new Date(year, month + 1, 0);
+  
+  let workDays = 0;
+  const currentDate = new Date(startDate);
+  
+  while (currentDate <= endDate) {
+    const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+    
+    if (scheduleType === "5x2") {
+      // Monday to Friday
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        workDays++;
+      }
+    } else if (scheduleType === "6x1") {
+      // Monday to Saturday
+      if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+        workDays++;
+      }
+    } else if (scheduleType === "Personalizado" && customWorkDays) {
+      // Custom work days
+      if (customWorkDays[dayOfWeek]) {
+        workDays++;
+      }
+    }
+    
+    // Move to next day
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return workDays;
+};

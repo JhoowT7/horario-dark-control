@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Employee, SystemSettings, TimeEntry } from "../types";
+import { Employee, SystemSettings, TimeEntry, MonthlyBalance } from "../types";
 import { mockEmployees, mockTimeEntries, defaultSettings } from "../data/mockData";
 import { toast } from "@/components/ui/sonner";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 
 interface AppContextType {
   employees: Employee[];
@@ -10,6 +11,7 @@ interface AppContextType {
   settings: SystemSettings;
   selectedEmployee: Employee | null;
   selectedDate: string;
+  monthlyBalances: MonthlyBalance[];
   setSelectedEmployee: (employee: Employee | null) => void;
   setSelectedDate: (date: string) => void;
   addEmployee: (employee: Employee) => void;
@@ -20,6 +22,9 @@ interface AppContextType {
   updateSettings: (settings: SystemSettings) => void;
   addHoliday: (date: string) => void;
   removeHoliday: (date: string) => void;
+  getCurrentDate: () => string;
+  getMonthBalanceForEmployee: (employeeId: string, month: string) => number;
+  getAccumulatedBalance: (employeeId: string) => number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,6 +33,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const EMPLOYEES_KEY = "timeTracker_employees";
 const TIME_ENTRIES_KEY = "timeTracker_timeEntries";
 const SETTINGS_KEY = "timeTracker_settings";
+const MONTHLY_BALANCES_KEY = "timeTracker_monthlyBalances";
 
 // Helper to format today's date as YYYY-MM-DD
 const getTodayFormatted = () => {
@@ -51,6 +57,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const storedSettings = localStorage.getItem(SETTINGS_KEY);
     return storedSettings ? JSON.parse(storedSettings) : defaultSettings;
   });
+
+  const [monthlyBalances, setMonthlyBalances] = useState<MonthlyBalance[]>(() => {
+    const storedBalances = localStorage.getItem(MONTHLY_BALANCES_KEY);
+    return storedBalances ? JSON.parse(storedBalances) : [];
+  });
   
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayFormatted());
@@ -67,6 +78,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
+  
+  useEffect(() => {
+    localStorage.setItem(MONTHLY_BALANCES_KEY, JSON.stringify(monthlyBalances));
+  }, [monthlyBalances]);
+
+  // Calculate monthly balances when time entries change
+  useEffect(() => {
+    calculateMonthlyBalances();
+  }, [timeEntries]);
+  
+  // Calculate monthly balances for all employees
+  const calculateMonthlyBalances = () => {
+    const newMonthlyBalances: MonthlyBalance[] = [];
+    
+    // Get unique employee IDs from time entries
+    const employeeIds = [...new Set(timeEntries.map(entry => entry.employeeId))];
+    
+    // Get unique months from time entries
+    const months = [...new Set(timeEntries.map(entry => entry.date.substring(0, 7)))];
+    
+    // Calculate balance for each employee and month
+    employeeIds.forEach(employeeId => {
+      months.forEach(month => {
+        const entriesForMonth = timeEntries.filter(
+          entry => entry.employeeId === employeeId && entry.date.startsWith(month)
+        );
+        
+        const totalBalanceMinutes = entriesForMonth.reduce(
+          (sum, entry) => sum + entry.balanceMinutes, 
+          0
+        );
+        
+        newMonthlyBalances.push({
+          month,
+          employeeId,
+          totalBalanceMinutes
+        });
+      });
+    });
+    
+    setMonthlyBalances(newMonthlyBalances);
+  };
+  
+  // Get current computer date
+  const getCurrentDate = () => {
+    return getTodayFormatted();
+  };
+  
+  // Get monthly balance for an employee
+  const getMonthBalanceForEmployee = (employeeId: string, month: string) => {
+    const monthBalance = monthlyBalances.find(
+      balance => balance.employeeId === employeeId && balance.month === month
+    );
+    
+    return monthBalance ? monthBalance.totalBalanceMinutes : 0;
+  };
+  
+  // Get accumulated balance for an employee (all months)
+  const getAccumulatedBalance = (employeeId: string) => {
+    return monthlyBalances
+      .filter(balance => balance.employeeId === employeeId)
+      .reduce((sum, balance) => sum + balance.totalBalanceMinutes, 0);
+  };
   
   // Employee CRUD operations
   const addEmployee = (employee: Employee) => {
@@ -149,6 +223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     settings,
     selectedEmployee,
     selectedDate,
+    monthlyBalances,
     setSelectedEmployee,
     setSelectedDate,
     addEmployee,
@@ -158,7 +233,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateTimeEntry,
     updateSettings,
     addHoliday,
-    removeHoliday
+    removeHoliday,
+    getCurrentDate,
+    getMonthBalanceForEmployee,
+    getAccumulatedBalance
   };
   
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

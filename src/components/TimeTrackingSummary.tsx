@@ -5,11 +5,17 @@ import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { minutesToTime, generateBalanceMessage } from "@/utils/timeUtils";
-import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth, getYear } from "date-fns";
+import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth, getYear, parseISO, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TimeTrackingSummaryProps {
   employee: Employee;
@@ -17,21 +23,46 @@ interface TimeTrackingSummaryProps {
 }
 
 const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onSelectDate }) => {
-  const { timeEntries, settings } = useAppContext();
+  const { timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, getAccumulatedBalance } = useAppContext();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [totalBalance, setTotalBalance] = useState(0);
+  const [monthlyBalance, setMonthlyBalance] = useState(0);
+  const [accumulatedBalance, setAccumulatedBalance] = useState(0);
   
   // Get employee's time entries
   const employeeEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
   
-  // Calculate total balance from all entries
+  // Initialize with the current month
   useEffect(() => {
-    const totalBalanceMinutes = employeeEntries.reduce(
-      (sum, entry) => sum + entry.balanceMinutes,
-      0
+    // Set current month to today's date
+    setCurrentMonth(new Date());
+  }, []);
+  
+  // Calculate balances
+  useEffect(() => {
+    // Monthly balance
+    const monthString = format(currentMonth, "yyyy-MM");
+    const monthlyBalanceMinutes = getMonthBalanceForEmployee(employee.id, monthString);
+    setMonthlyBalance(monthlyBalanceMinutes);
+    
+    // Total accumulated balance
+    const accumulatedBalanceMinutes = getAccumulatedBalance(employee.id);
+    setAccumulatedBalance(accumulatedBalanceMinutes);
+    
+    // Current visible month entries
+    const currentMonthEntries = employeeEntries.filter(
+      entry => {
+        const entryDate = parseISO(entry.date);
+        return isSameMonth(entryDate, currentMonth);
+      }
     );
-    setTotalBalance(totalBalanceMinutes);
-  }, [employeeEntries]);
+    
+    const currentMonthBalance = currentMonthEntries.reduce(
+      (sum, entry) => sum + entry.balanceMinutes, 0
+    );
+    
+    setTotalBalance(currentMonthBalance);
+  }, [currentMonth, employeeEntries, employee.id, getMonthBalanceForEmployee, getAccumulatedBalance]);
   
   // Navigate to previous month
   const goToPreviousMonth = () => {
@@ -41,6 +72,11 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   // Navigate to next month
   const goToNextMonth = () => {
     setCurrentMonth((prev) => addMonths(prev, 1));
+  };
+  
+  // Go to current month
+  const goToCurrentMonth = () => {
+    setCurrentMonth(new Date());
   };
   
   // Format the month title
@@ -83,25 +119,58 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
           <CardTitle className="text-lg md:text-xl">
             {employee.name}
           </CardTitle>
-          <Badge 
-            variant="outline" 
-            className={`px-3 py-1 ${totalBalance > 0 ? 'bg-positive/10 text-positive' : totalBalance < 0 ? 'bg-negative/10 text-negative' : 'bg-gray-800 text-gray-400'}`}
-          >
-            {totalBalance === 0 ? (
-              <span>Banco de Horas: 00:00</span>
-            ) : totalBalance > 0 ? (
-              <span className="flex items-center">
-                <ArrowUp className="h-4 w-4 mr-1" /> {minutesToTime(totalBalance)}
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <ArrowDown className="h-4 w-4 mr-1" /> {minutesToTime(Math.abs(totalBalance))}
-              </span>
-            )}
-          </Badge>
+          <div className="flex gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className={`px-3 py-1 ${monthlyBalance > 0 ? 'bg-positive/10 text-positive' : monthlyBalance < 0 ? 'bg-negative/10 text-negative' : 'bg-gray-800 text-gray-400'}`}
+                >
+                  {monthlyBalance === 0 ? (
+                    <span>Mês: 00:00</span>
+                  ) : monthlyBalance > 0 ? (
+                    <span className="flex items-center">
+                      <ArrowUp className="h-4 w-4 mr-1" /> {minutesToTime(monthlyBalance)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <ArrowDown className="h-4 w-4 mr-1" /> {minutesToTime(Math.abs(monthlyBalance))}
+                    </span>
+                  )}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Saldo do mês atual</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className={`px-3 py-1 ${accumulatedBalance > 0 ? 'bg-positive/10 text-positive' : accumulatedBalance < 0 ? 'bg-negative/10 text-negative' : 'bg-gray-800 text-gray-400'}`}
+                >
+                  {accumulatedBalance === 0 ? (
+                    <span>Acumulado: 00:00</span>
+                  ) : accumulatedBalance > 0 ? (
+                    <span className="flex items-center">
+                      <ArrowUp className="h-4 w-4 mr-1" /> {minutesToTime(accumulatedBalance)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <ArrowDown className="h-4 w-4 mr-1" /> {minutesToTime(Math.abs(accumulatedBalance))}
+                    </span>
+                  )}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Saldo acumulado de todos os meses</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
         <p className="text-sm text-gray-400 mt-1">
-          {generateBalanceMessage(totalBalance)}
+          {generateBalanceMessage(accumulatedBalance)}
         </p>
       </CardHeader>
       <CardContent>
@@ -120,7 +189,17 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h3 className="text-lg font-medium capitalize">{formattedMonth}</h3>
+              <div className="flex flex-col items-center">
+                <h3 className="text-lg font-medium capitalize">{formattedMonth}</h3>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={goToCurrentMonth} 
+                  className="text-xs text-gray-400"
+                >
+                  Ir para mês atual
+                </Button>
+              </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -215,6 +294,10 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
           </TabsContent>
           
           <TabsContent value="list">
+            <div className="mb-4 flex justify-between items-center">
+              <div className="font-medium">Registros do Mês</div>
+              <div className="text-sm text-gray-400">{formattedMonth}</div>
+            </div>
             {employeeEntries.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Calendar className="mx-auto h-8 w-8 opacity-30 mb-2" />
@@ -223,6 +306,10 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
             ) : (
               <div className="space-y-2">
                 {employeeEntries
+                  .filter(entry => {
+                    const entryDate = parseISO(entry.date);
+                    return isSameMonth(entryDate, currentMonth);
+                  })
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((entry) => (
                     <button

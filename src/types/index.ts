@@ -44,3 +44,9 @@ export interface SystemSettings {
   maxExtraMinutes: number;
   holidays: string[]; // Array of dates in format YYYY-MM-DD
 }
+
+export interface MonthlyBalance {
+  month: string; // YYYY-MM format
+  employeeId: string;
+  totalBalanceMinutes: number;
+}

@@ -122,8 +122,30 @@ export const generateBalanceMessage = (balanceMinutes: number): string => {
   }
   
   if (balanceMinutes > 0) {
-    return `Você possui ${minutesToTime(balanceMinutes)} de saldo positivo que pode ser utilizado para compensações.`;
+    const hours = Math.floor(balanceMinutes / 60);
+    const minutes = balanceMinutes % 60;
+    
+    if (hours > 0) {
+      return `Você possui ${hours}h${minutes > 0 ? ` e ${minutes}min` : ''} de saldo positivo que pode ser utilizado para compensações.`;
+    }
+    
+    return `Você possui ${minutes}min de saldo positivo que pode ser utilizado para compensações.`;
   }
   
-  return `Você deve ${minutesToTime(Math.abs(balanceMinutes))}, que pode ser pago realizando hora extra nos próximos dias.`;
+  const absMinutes = Math.abs(balanceMinutes);
+  const hours = Math.floor(absMinutes / 60);
+  const minutes = absMinutes % 60;
+  
+  if (hours > 0) {
+    return `Você deve ${hours}h${minutes > 0 ? ` e ${minutes}min` : ''}, que pode ser pago realizando hora extra nos próximos dias.`;
+  }
+  
+  return `Você deve ${minutes}min, que pode ser pago realizando hora extra nos próximos dias.`;
+};
+
+// Format month string as readable text
+export const formatMonthToText = (monthString: string): string => {
+  const [year, month] = monthString.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };

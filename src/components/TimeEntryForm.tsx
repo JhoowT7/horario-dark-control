@@ -7,9 +7,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance, generateBalanceMessage } from "@/utils/timeUtils";
+import { parseISO, format, differenceInCalendarDays } from "date-fns";
 
 interface TimeEntryFormProps {
   employee: Employee;
@@ -18,7 +19,7 @@ interface TimeEntryFormProps {
 }
 
 const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack }) => {
-  const { timeEntries, addTimeEntry, settings } = useAppContext();
+  const { timeEntries, addTimeEntry, settings, getCurrentDate } = useAppContext();
   
   // Find existing entry for this employee and date
   const existingEntry = timeEntries.find(
@@ -40,6 +41,12 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   const [workedMinutes, setWorkedMinutes] = useState(existingEntry?.workedMinutes || 0);
   const [balanceMinutes, setBalanceMinutes] = useState(existingEntry?.balanceMinutes || 0);
   const [calculationMessage, setCalculationMessage] = useState("");
+  
+  // Check if the date is today
+  const isToday = date === getCurrentDate();
+  
+  // Calculate how many days in the past or future
+  const daysFromToday = differenceInCalendarDays(parseISO(date), parseISO(getCurrentDate()));
   
   // Format input when it loses focus
   const handleTimeBlur = (value: string, setter: (value: string) => void) => {
@@ -124,6 +131,31 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     }
   }, [entry, lunchOut, lunchIn, exit, isHoliday, employee, date, settings]);
   
+  // Fill current time for today's entry
+  const fillCurrentTime = (field: 'entry' | 'lunchOut' | 'lunchIn' | 'exit') => {
+    if (!isToday) return; // Only works for today
+    
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    
+    switch (field) {
+      case 'entry':
+        setEntry(currentTime);
+        break;
+      case 'lunchOut':
+        setLunchOut(currentTime);
+        break;
+      case 'lunchIn':
+        setLunchIn(currentTime);
+        break;
+      case 'exit':
+        setExit(currentTime);
+        break;
+    }
+  };
+  
   // Save time entry
   const handleSave = () => {
     const timeEntryData: TimeEntry = {
@@ -140,6 +172,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     };
     
     addTimeEntry(timeEntryData);
+    onBack();
   };
   
   // Format date for display
@@ -166,11 +199,22 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-lg md:text-xl">
+            <CardTitle className="text-lg md:text-xl flex items-center">
               {employee.name}
+              {isToday && (
+                <Badge className="ml-2 bg-cyanBlue text-black">Hoje</Badge>
+              )}
             </CardTitle>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-gray-400 flex items-center">
+              <Calendar className="h-4 w-4 mr-1" />
               {formatDate(date)}
+              {!isToday && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {daysFromToday < 0 
+                    ? `${Math.abs(daysFromToday)} dia${Math.abs(daysFromToday) !== 1 ? 's' : ''} atrás` 
+                    : `${daysFromToday} dia${daysFromToday !== 1 ? 's' : ''} à frente`}
+                </Badge>
+              )}
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={onBack}>
@@ -211,7 +255,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
         {!isHoliday && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="entry">Entrada</Label>
+              <Label htmlFor="entry" className="flex items-center justify-between">
+                <span>Entrada</span>
+                {isToday && (
+                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('entry')} className="h-6 px-2">
+                    <Clock className="h-3 w-3 mr-1" /> Agora
+                  </Button>
+                )}
+              </Label>
               <Input
                 id="entry"
                 value={entry}
@@ -222,7 +273,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lunch-out">Saída Almoço</Label>
+              <Label htmlFor="lunch-out" className="flex items-center justify-between">
+                <span>Saída Almoço</span>
+                {isToday && (
+                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('lunchOut')} className="h-6 px-2">
+                    <Clock className="h-3 w-3 mr-1" /> Agora
+                  </Button>
+                )}
+              </Label>
               <Input
                 id="lunch-out"
                 value={lunchOut}
@@ -233,7 +291,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lunch-in">Retorno Almoço</Label>
+              <Label htmlFor="lunch-in" className="flex items-center justify-between">
+                <span>Retorno Almoço</span>
+                {isToday && (
+                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('lunchIn')} className="h-6 px-2">
+                    <Clock className="h-3 w-3 mr-1" /> Agora
+                  </Button>
+                )}
+              </Label>
               <Input
                 id="lunch-in"
                 value={lunchIn}
@@ -244,7 +309,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="exit">Saída</Label>
+              <Label htmlFor="exit" className="flex items-center justify-between">
+                <span>Saída</span>
+                {isToday && (
+                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('exit')} className="h-6 px-2">
+                    <Clock className="h-3 w-3 mr-1" /> Agora
+                  </Button>
+                )}
+              </Label>
               <Input
                 id="exit"
                 value={exit}
@@ -294,14 +366,32 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button 
-          variant="outline" 
-          onClick={copyDefaultSchedule}
-          className="text-gray-400"
-        >
-          <Copy className="h-4 w-4 mr-2" /> Usar Horário Padrão
-        </Button>
+      <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between">
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={copyDefaultSchedule}
+            className="text-gray-400"
+          >
+            <Copy className="h-4 w-4 mr-2" /> Usar Horário Padrão
+          </Button>
+          
+          {isToday && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                fillCurrentTime('entry');
+                fillCurrentTime('lunchOut');
+                fillCurrentTime('lunchIn');
+                fillCurrentTime('exit');
+              }}
+              className="text-gray-400"
+            >
+              <CalendarClock className="h-4 w-4 mr-2" /> Preencher Horário Atual
+            </Button>
+          )}
+        </div>
+        
         <Button onClick={handleSave} className="bg-cyanBlue hover:bg-cyanBlue/90 text-black">
           <Save className="h-4 w-4 mr-2" /> Salvar
         </Button>

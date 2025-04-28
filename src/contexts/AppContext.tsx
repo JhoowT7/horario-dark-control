@@ -128,9 +128,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMonthlyBalances(newMonthlyBalances);
   };
   
-  // Get current computer date
+  // Get current computer date - Fixed to ensure it gets the current date properly
   const getCurrentDate = () => {
-    return getTodayFormatted();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
   
   // Check if a date is within an employee's vacation period

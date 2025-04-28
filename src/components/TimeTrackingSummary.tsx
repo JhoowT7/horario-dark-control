@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle, Calendar as CalendarCheck, Palmtree } from "lucide-react";
+import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle, Calendar as CalendarCheck, Palmtree, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { minutesToTime, generateBalanceMessage } from "@/utils/timeUtils";
 import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth, getYear, parseISO, isSameMonth, isWithinInterval, isWeekend, addDays } from "date-fns";
@@ -30,7 +30,15 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   const [monthlyBalance, setMonthlyBalance] = useState(0);
   const [accumulatedBalance, setAccumulatedBalance] = useState(0);
   const [missingEntries, setMissingEntries] = useState<string[]>([]);
-  const today = parseISO(getCurrentDate());
+  const [monthSummary, setMonthSummary] = useState({
+    totalWorkedMinutes: 0,
+    totalExpectedMinutes: 0,
+    totalWorkingDays: 0,
+    filledDays: 0,
+  });
+  
+  // Get current date properly
+  const today = new Date();
   
   // Get employee's time entries
   const employeeEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
@@ -72,14 +80,24 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
       end: endOfMonth(currentMonth)
     });
     
+    // Calculate month summary
+    let totalWorkedMin = 0;
+    let totalExpectedMin = 0;
+    let totalWorkDays = 0;
+    let filledDays = 0;
+    
     const missingDays: string[] = [];
     
     daysInThisMonth.forEach(day => {
       // Skip future days
       if (day > today) return;
       
-      // Skip weekend days based on schedule type
+      // Skip non-working days based on schedule type
       if (!isWorkingDay(day)) return;
+      
+      // Count as a working day
+      totalWorkDays++;
+      totalExpectedMin += employee.expectedMinutesPerDay;
       
       // Skip holidays
       if (isHolidayDate(day)) return;
@@ -89,16 +107,25 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
       if (isDateInVacation(employee.id, dateStr)) return;
       
       // Check if entry exists
-      const hasEntry = currentMonthEntries.some(entry => 
-        entry.date === dateStr && (entry.entry || entry.isHoliday || entry.isVacation)
-      );
+      const entry = currentMonthEntries.find(entry => entry.date === dateStr);
       
-      if (!hasEntry) {
+      if (entry) {
+        filledDays++;
+        totalWorkedMin += entry.workedMinutes;
+      } else {
         missingDays.push(dateStr);
       }
     });
     
+    // Update states
     setMissingEntries(missingDays);
+    setMonthSummary({
+      totalWorkedMinutes: totalWorkedMin,
+      totalExpectedMinutes: totalExpectedMin,
+      totalWorkingDays: totalWorkDays,
+      filledDays: filledDays
+    });
+    
   }, [currentMonth, employeeEntries, employee.id, getMonthBalanceForEmployee, getAccumulatedBalance]);
   
   // Navigate to previous month
@@ -139,12 +166,12 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   const isWorkingDay = (date: Date) => {
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
-    // For 5x2 schedule, only weekdays are working days
+    // For 5x2 schedule - work days are Monday (1) to Friday (5)
     if (employee.scheduleType === "5x2") {
       return dayOfWeek >= 1 && dayOfWeek <= 5;
     }
     
-    // For 6x1 schedule, only Sunday is a non-working day
+    // For 6x1 schedule - only Sunday (0) is a non-working day
     if (employee.scheduleType === "6x1") {
       return dayOfWeek !== 0;
     }
@@ -239,6 +266,56 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Monthly Summary Card */}
+        <Card className="mb-4 bg-gray-800/50 border-none">
+          <CardContent className="p-4">
+            <h3 className="font-medium mb-2 flex items-center">
+              <Clock className="h-4 w-4 mr-2" />
+              Resumo do Mês: {formattedMonth}
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <div className="space-y-1">
+                <div className="text-sm text-gray-400">Dias úteis:</div>
+                <div className="text-lg font-medium">{monthSummary.totalWorkingDays} dias</div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-sm text-gray-400">Dias registrados:</div>
+                <div className="text-lg font-medium">{monthSummary.filledDays} de {monthSummary.totalWorkingDays}</div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-sm text-gray-400">Horas trabalhadas:</div>
+                <div className="text-lg font-medium">{minutesToTime(monthSummary.totalWorkedMinutes)}</div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-sm text-gray-400">Horas esperadas:</div>
+                <div className="text-lg font-medium">{minutesToTime(monthSummary.totalExpectedMinutes)}</div>
+              </div>
+              
+              <div className="col-span-2 pt-2 border-t border-gray-700">
+                <div className="text-sm text-gray-400">Saldo do mês:</div>
+                <div className={`text-lg font-medium flex items-center ${monthlyBalance > 0 ? 'text-positive' : monthlyBalance < 0 ? 'text-negative' : ''}`}>
+                  {monthlyBalance === 0 ? (
+                    <span>00:00</span>
+                  ) : monthlyBalance > 0 ? (
+                    <span className="flex items-center">
+                      <ArrowUp className="h-5 w-5 mr-1" /> {minutesToTime(monthlyBalance)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <ArrowDown className="h-5 w-5 mr-1" /> {minutesToTime(Math.abs(monthlyBalance))}
+                    </span>
+                  )}
+                  <span className="text-sm text-gray-400 ml-2">({monthlyBalance > 0 ? 'positivo' : monthlyBalance < 0 ? 'negativo' : 'neutro'})</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       
         <Tabs defaultValue="month">
           <TabsList className="mb-4">

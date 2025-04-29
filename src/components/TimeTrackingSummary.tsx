@@ -206,7 +206,11 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     }
     
     // For custom schedule, check the employee's workDays
-    return employee.workDays[dayOfWeek] === true;
+    if (employee.scheduleType === "Personalizado") {
+      return employee.workDays[dayOfWeek] === true;
+    }
+    
+    return false;
   };
   
   // Check if a date is a holiday
@@ -474,6 +478,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
             </div>
             
             <div className="grid grid-cols-7 gap-1 text-center">
+              {/* Use the correct order for days of week in Portuguese: D, S, T, Q, Q, S, S */}
               {["D", "S", "T", "Q", "Q", "S", "S"].map((day, i) => (
                 <div key={i} className="py-2 text-sm font-medium text-gray-400">
                   {day}
@@ -481,6 +486,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
               ))}
               
               {daysInMonth.map((day, i) => {
+                const dayOfWeek = getDay(day); // 0 = Sunday, 1 = Monday, etc.
                 const dateStr = formatDateString(day);
                 const entry = getEntryForDate(day);
                 const isWorkDay = isWorkingDay(day);
@@ -521,6 +527,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                     className={dayClass}
                     onClick={() => isWorkDay || entry ? onSelectDate(dateStr) : null}
                     disabled={!isWorkDay && !entry}
+                    title={`${format(day, "dd/MM/yyyy")} - ${["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dayOfWeek]}`}
                   >
                     <div className="text-sm">{format(day, "d")}</div>
                     

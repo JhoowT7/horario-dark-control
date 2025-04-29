@@ -13,13 +13,14 @@ export const isWorkingDay = (date: Date, employee: Employee): boolean => {
   const dayOfWeek = getDay(date);
   
   // For 5x2 schedule - work days are Monday (1) to Friday (5)
+  // Weekend days are Saturday (6) and Sunday (0)
   if (employee.scheduleType === "5x2") {
-    return dayOfWeek >= 1 && dayOfWeek <= 5;
+    return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday only
   }
   
   // For 6x1 schedule - only Sunday (0) is a non-working day
   if (employee.scheduleType === "6x1") {
-    return dayOfWeek !== 0;
+    return dayOfWeek !== 0; // All days except Sunday
   }
   
   // For custom schedule, check the employee's workDays

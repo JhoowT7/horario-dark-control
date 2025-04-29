@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon
 } from "lucide-react";
-import { format, isToday, isWithinInterval, getDay } from "date-fns";
+import { format, isToday, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TimeEntry } from "@/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -40,6 +40,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR });
   
+  // Day names in Portuguese - properly ordered from Sunday (0) to Saturday (6)
+  const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"];
+  
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -71,21 +74,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       </div>
       
       <div className="grid grid-cols-7 gap-1 text-center">
-        {/* Use the correct order for days of week in Portuguese: D, S, T, Q, Q, S, S */}
-        {["D", "S", "T", "Q", "Q", "S", "S"].map((day, i) => (
+        {/* Headers for days of week: Sunday(D) to Saturday(S) */}
+        {dayNames.map((day, i) => (
           <div key={i} className="py-2 text-sm font-medium text-gray-400">
             {day}
           </div>
         ))}
         
         {daysInMonth.map((day, i) => {
-          const dayOfWeek = getDay(day); // 0 = Sunday, 1 = Monday, etc.
+          // IMPORTANT: Get the actual day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
+          const dayOfWeek = getDay(day);
           const dateStr = formatDateString(day);
           const entry = getEntryForDate(day);
           const isWorkDay = isWorkingDay(day);
           const isHoliday = isHolidayDate(day);
           const isVacation = isVacationDate(day);
           const isMissingEntry = missingEntries.includes(dateStr);
+          
+          // Debug information
+          console.log(`Date: ${dateStr}, Day of week: ${dayOfWeek}, Is work day: ${isWorkDay}`);
           
           // Determine day styling
           let dayClass = "p-2 rounded-md transition-colors";
@@ -118,42 +125,49 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           const tooltipText = `${format(day, "dd/MM/yyyy")} - ${dayLabel}`;
           
           return (
-            <button
-              key={i}
-              className={dayClass}
-              onClick={() => isWorkDay || entry ? onSelectDate(dateStr) : null}
-              disabled={!isWorkDay && !entry}
-              title={tooltipText}
-            >
-              <div className="text-sm">{format(day, "d")}</div>
-              
-              {entry && (
-                <div className={`text-xs mt-1 ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : ''}`}>
-                  {entry.balanceMinutes !== 0 && (
-                    entry.balanceMinutes > 0 ? "+" : "-"
-                  )}
-                  {entry.balanceMinutes !== 0 && minutesToTime(Math.abs(entry.balanceMinutes))}
-                </div>
-              )}
-              
-              {isHoliday && (
-                <div className="text-xs mt-1 text-gray-400">
-                  Feriado
-                </div>
-              )}
-              
-              {isVacation && (
-                <div className="text-xs mt-1 text-cyanBlue/80">
-                  Férias
-                </div>
-              )}
-              
-              {isMissingEntry && !entry && (
-                <div className="text-xs mt-1 text-negative">
-                  Pendente
-                </div>
-              )}
-            </button>
+            <TooltipProvider key={i}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={dayClass}
+                    onClick={() => isWorkDay || entry ? onSelectDate(dateStr) : null}
+                    disabled={!isWorkDay && !entry}
+                  >
+                    <div className="text-sm">{format(day, "d")}</div>
+                    
+                    {entry && (
+                      <div className={`text-xs mt-1 ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : ''}`}>
+                        {entry.balanceMinutes !== 0 && (
+                          entry.balanceMinutes > 0 ? "+" : "-"
+                        )}
+                        {entry.balanceMinutes !== 0 && minutesToTime(Math.abs(entry.balanceMinutes))}
+                      </div>
+                    )}
+                    
+                    {isHoliday && (
+                      <div className="text-xs mt-1 text-gray-400">
+                        Feriado
+                      </div>
+                    )}
+                    
+                    {isVacation && (
+                      <div className="text-xs mt-1 text-cyanBlue/80">
+                        Férias
+                      </div>
+                    )}
+                    
+                    {isMissingEntry && !entry && (
+                      <div className="text-xs mt-1 text-negative">
+                        Pendente
+                      </div>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {tooltipText}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
       </div>

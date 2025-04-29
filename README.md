@@ -1,7 +1,7 @@
 # Time Bank Control System
 
 ## Project info
-I got tired of having to write down my positive and negative balance on a spreadsheet during the month at work.
+I got tired of having to write down my positive and negative hour balance on a spreadsheet during the month at work.
 
 There are several ways of editing your application.
 

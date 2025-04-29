@@ -6,10 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle, Calendar as CalendarCheck, Palmtree, Clock } from "lucide-react";
+import { 
+  Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, 
+  Info, AlertCircle, CheckCircle, Calendar as CalendarCheck, 
+  Palmtree, Clock, FileText, Trash, RefreshCw
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { minutesToTime, generateBalanceMessage } from "@/utils/timeUtils";
-import { format, isToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth, getYear, parseISO, isSameMonth, isWithinInterval, isWeekend, addDays } from "date-fns";
+import { 
+  format, isToday, startOfMonth, endOfMonth, eachDayOfInterval,
+  addMonths, subMonths, getMonth, getYear, parseISO, isSameMonth,
+  isWithinInterval, isWeekend, getDay
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Tooltip,
@@ -17,6 +25,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface TimeTrackingSummaryProps {
   employee: Employee;
@@ -24,12 +41,17 @@ interface TimeTrackingSummaryProps {
 }
 
 const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onSelectDate }) => {
-  const { timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, getAccumulatedBalance, isDateInVacation } = useAppContext();
+  const { 
+    timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, 
+    getAccumulatedBalance, isDateInVacation, resetMonthBalance
+  } = useAppContext();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [totalBalance, setTotalBalance] = useState(0);
   const [monthlyBalance, setMonthlyBalance] = useState(0);
+  const [previousMonthBalance, setPreviousMonthBalance] = useState(0);
   const [accumulatedBalance, setAccumulatedBalance] = useState(0);
   const [missingEntries, setMissingEntries] = useState<string[]>([]);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [monthSummary, setMonthSummary] = useState({
     totalWorkedMinutes: 0,
     totalExpectedMinutes: 0,
@@ -55,6 +77,12 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     const monthString = format(currentMonth, "yyyy-MM");
     const monthlyBalanceMinutes = getMonthBalanceForEmployee(employee.id, monthString);
     setMonthlyBalance(monthlyBalanceMinutes);
+    
+    // Previous month balance
+    const prevMonth = subMonths(currentMonth, 1);
+    const prevMonthString = format(prevMonth, "yyyy-MM");
+    const prevMonthBalance = getMonthBalanceForEmployee(employee.id, prevMonthString);
+    setPreviousMonthBalance(prevMonthBalance);
     
     // Total accumulated balance
     const accumulatedBalanceMinutes = getAccumulatedBalance(employee.id);
@@ -164,7 +192,8 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   
   // Determine if a date is a working day for the employee
   const isWorkingDay = (date: Date) => {
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    // Get day of week (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = getDay(date);
     
     // For 5x2 schedule - work days are Monday (1) to Friday (5)
     if (employee.scheduleType === "5x2") {
@@ -195,6 +224,13 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
       entry => entry.date === dateString && entry.isVacation
     );
   };
+
+  // Handle reset month balance
+  const handleResetMonthBalance = () => {
+    const monthString = format(currentMonth, "yyyy-MM");
+    resetMonthBalance(employee.id, monthString);
+    setShowResetDialog(false);
+  };
   
   return (
     <Card className="w-full card-gradient animate-slide-up">
@@ -204,6 +240,32 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
             {employee.name}
           </CardTitle>
           <div className="flex gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className={`px-3 py-1 ${previousMonthBalance > 0 ? 'bg-positive/10 text-positive' : previousMonthBalance < 0 ? 'bg-negative/10 text-negative' : 'bg-gray-800 text-gray-400'}`}
+                >
+                  <span className="flex items-center">
+                    Ant: {previousMonthBalance === 0 ? (
+                      <span>00:00</span>
+                    ) : previousMonthBalance > 0 ? (
+                      <span className="flex items-center">
+                        <ArrowUp className="h-4 w-4 ml-1 mr-1" /> {minutesToTime(previousMonthBalance)}
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <ArrowDown className="h-4 w-4 ml-1 mr-1" /> {minutesToTime(Math.abs(previousMonthBalance))}
+                      </span>
+                    )}
+                  </span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Saldo do mês anterior</p>
+              </TooltipContent>
+            </Tooltip>
+            
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge 
@@ -270,10 +332,33 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
         {/* Monthly Summary Card */}
         <Card className="mb-4 bg-gray-800/50 border-none">
           <CardContent className="p-4">
-            <h3 className="font-medium mb-2 flex items-center">
-              <Clock className="h-4 w-4 mr-2" />
-              Resumo do Mês: {formattedMonth}
-            </h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                Resumo do Mês: {formattedMonth}
+              </h3>
+              <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="h-8">
+                    <Trash className="h-4 w-4 mr-1" /> Zerar Saldo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Confirmar reinicialização</DialogTitle>
+                    <DialogDescription>
+                      Tem certeza que deseja zerar o saldo do mês atual? Esta ação não pode ser desfeita.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
+                    <Button variant="destructive" onClick={handleResetMonthBalance}>
+                      Confirmar
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
             
             <div className="grid grid-cols-2 gap-4 mt-2">
               <div className="space-y-1">
@@ -297,6 +382,23 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
               </div>
               
               <div className="col-span-2 pt-2 border-t border-gray-700">
+                <div className="text-sm text-gray-400">Saldo anterior:</div>
+                <div className={`text-lg font-medium flex items-center ${previousMonthBalance > 0 ? 'text-positive' : previousMonthBalance < 0 ? 'text-negative' : ''}`}>
+                  {previousMonthBalance === 0 ? (
+                    <span>00:00</span>
+                  ) : previousMonthBalance > 0 ? (
+                    <span className="flex items-center">
+                      <ArrowUp className="h-5 w-5 mr-1" /> {minutesToTime(previousMonthBalance)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <ArrowDown className="h-5 w-5 mr-1" /> {minutesToTime(Math.abs(previousMonthBalance))}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="col-span-2 pt-2 border-t border-gray-700">
                 <div className="text-sm text-gray-400">Saldo do mês:</div>
                 <div className={`text-lg font-medium flex items-center ${monthlyBalance > 0 ? 'text-positive' : monthlyBalance < 0 ? 'text-negative' : ''}`}>
                   {monthlyBalance === 0 ? (
@@ -311,6 +413,24 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                     </span>
                   )}
                   <span className="text-sm text-gray-400 ml-2">({monthlyBalance > 0 ? 'positivo' : monthlyBalance < 0 ? 'negativo' : 'neutro'})</span>
+                </div>
+              </div>
+              
+              <div className="col-span-2 pt-2 border-t border-gray-700">
+                <div className="text-sm text-gray-400">Saldo acumulado:</div>
+                <div className={`text-lg font-medium flex items-center ${accumulatedBalance > 0 ? 'text-positive' : accumulatedBalance < 0 ? 'text-negative' : ''}`}>
+                  {accumulatedBalance === 0 ? (
+                    <span>00:00</span>
+                  ) : accumulatedBalance > 0 ? (
+                    <span className="flex items-center">
+                      <ArrowUp className="h-5 w-5 mr-1" /> {minutesToTime(accumulatedBalance)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <ArrowDown className="h-5 w-5 mr-1" /> {minutesToTime(Math.abs(accumulatedBalance))}
+                    </span>
+                  )}
+                  <span className="text-sm text-gray-400 ml-2">({accumulatedBalance > 0 ? 'positivo' : accumulatedBalance < 0 ? 'negativo' : 'neutro'})</span>
                 </div>
               </div>
             </div>
@@ -464,9 +584,14 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
           </TabsContent>
           
           <TabsContent value="list">
-            <div className="mb-4 flex justify-between items-center">
+            <div className="flex justify-between items-center mb-4">
               <div className="font-medium">Registros do Mês</div>
-              <div className="text-sm text-gray-400">{formattedMonth}</div>
+              <div className="space-x-2">
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Exportar</span>
+                </Button>
+              </div>
             </div>
             {employeeEntries.filter(entry => {
               const entryDate = parseISO(entry.date);

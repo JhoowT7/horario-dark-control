@@ -27,6 +27,7 @@ interface AppContextType {
   getMonthBalanceForEmployee: (employeeId: string, month: string) => number;
   getAccumulatedBalance: (employeeId: string) => number;
   isDateInVacation: (employeeId: string, date: string) => boolean;
+  resetMonthBalance: (employeeId: string, month: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -131,10 +132,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Get current computer date - Fixed to ensure it gets the current date properly
   const getCurrentDate = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return format(now, "yyyy-MM-dd");
   };
   
   // Check if a date is within an employee's vacation period
@@ -162,6 +160,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return monthlyBalances
       .filter(balance => balance.employeeId === employeeId)
       .reduce((sum, balance) => sum + balance.totalBalanceMinutes, 0);
+  };
+  
+  // Reset the monthly balance for an employee
+  const resetMonthBalance = (employeeId: string, month: string) => {
+    const updatedBalances = monthlyBalances.map(balance => {
+      if (balance.employeeId === employeeId && balance.month === month) {
+        return { ...balance, totalBalanceMinutes: 0 };
+      }
+      return balance;
+    });
+    
+    setMonthlyBalances(updatedBalances);
+    toast.success("Saldo do mês zerado com sucesso!");
   };
   
   // Employee CRUD operations
@@ -280,7 +291,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getCurrentDate,
     getMonthBalanceForEmployee,
     getAccumulatedBalance,
-    isDateInVacation
+    isDateInVacation,
+    resetMonthBalance
   };
   
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

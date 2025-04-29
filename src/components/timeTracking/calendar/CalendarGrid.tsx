@@ -1,6 +1,5 @@
-
 import React from "react";
-import { getDay } from "date-fns";
+import { getDay, isWeekend } from "date-fns";
 import { TimeEntry } from "@/types";
 import CalendarDay from "./CalendarDay";
 
@@ -18,35 +17,45 @@ interface CalendarGridProps {
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   daysInMonth,
   getEntryForDate,
-  isWorkingDay,
+  isWorkingDay: originalIsWorkingDay,
   isHolidayDate,
   isVacationDate,
   missingEntries,
   formatDateString,
-  onSelectDate
+  onSelectDate,
 }) => {
-  // Day names in Portuguese - properly ordered from Sunday (0) to Saturday (6)
-  const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"];
-  
+  const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"]; // Domingo a Sábado
+
+  // Corrige isWorkingDay para marcar sábados e domingos como não úteis
+  const isWorkingDay = (date: Date): boolean => {
+    return !isWeekend(date); // True para segunda a sexta, false para sábado e domingo
+  };
+
+  // Calcula o dia da semana do primeiro dia do mês (0 = Domingo, 1 = Segunda, ...)
+  const firstDayOfMonth = getDay(daysInMonth[0]);
+  const emptyDays = Array(firstDayOfMonth).fill(null);
+
   return (
     <div className="grid grid-cols-7 gap-1 text-center">
-      {/* Headers for days of week: Sunday(D) to Saturday(S) */}
       {dayNames.map((day, i) => (
         <div key={i} className="py-2 text-sm font-medium text-gray-400">
           {day}
         </div>
       ))}
       
+      {emptyDays.map((_, i) => (
+        <div key={`empty-${i}`} className="p-2 bg-transparent" />
+      ))}
+      
       {daysInMonth.map((day, i) => {
-        // Get the actual day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
         const dayOfWeek = getDay(day);
         const dateStr = formatDateString(day);
         const entry = getEntryForDate(day);
-        const isWorkDay = isWorkingDay(day);
+        const isWorkDay = isWorkingDay(day); // Usa a versão corrigida
         const isHoliday = isHolidayDate(day);
         const isVacation = isVacationDate(day);
         const isMissingEntry = missingEntries.includes(dateStr);
-        
+
         return (
           <CalendarDay
             key={i}

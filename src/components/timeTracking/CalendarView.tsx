@@ -1,6 +1,6 @@
-
 import React from "react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale"; // Adicione esta linha
 import { TimeEntry } from "@/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import CalendarHeader from "./calendar/CalendarHeader";
@@ -36,7 +36,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   formatDateString,
   onSelectDate
 }) => {
-  const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: require("date-fns/locale/ptBR") });
+  const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR }); // Corrigido aqui
   
   return (
     <div className="space-y-4">

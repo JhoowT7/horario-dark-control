@@ -1,8 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Employee, SystemSettings, TimeEntry, MonthlyBalance, VacationPeriod } from "../types";
 import { mockEmployees, mockTimeEntries, defaultSettings } from "../data/mockData";
 import { toast } from "@/components/ui/sonner";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO, isWithinInterval } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO, isWithinInterval, addMonths } from "date-fns";
 
 interface AppContextType {
   employees: Employee[];
@@ -28,6 +29,9 @@ interface AppContextType {
   getAccumulatedBalance: (employeeId: string) => number;
   isDateInVacation: (employeeId: string, date: string) => boolean;
   resetMonthBalance: (employeeId: string, month: string) => void;
+  transferMonthBalance: (employeeId: string, fromMonth: string) => void;
+  toggleTransferBalanceOption: (enabled: boolean) => void;
+  isTransferBalanceEnabled: () => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -37,6 +41,7 @@ const EMPLOYEES_KEY = "timeTracker_employees";
 const TIME_ENTRIES_KEY = "timeTracker_timeEntries";
 const SETTINGS_KEY = "timeTracker_settings";
 const MONTHLY_BALANCES_KEY = "timeTracker_monthlyBalances";
+const TRANSFER_BALANCE_OPTION_KEY = "timeTracker_transferBalanceOption";
 
 // Helper to format today's date as YYYY-MM-DD
 const getTodayFormatted = () => {
@@ -71,6 +76,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storedBalances ? JSON.parse(storedBalances) : [];
   });
   
+  const [transferBalanceEnabled, setTransferBalanceEnabled] = useState<boolean>(() => {
+    const storedOption = localStorage.getItem(TRANSFER_BALANCE_OPTION_KEY);
+    return storedOption ? JSON.parse(storedOption) : false;
+  });
+  
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayFormatted());
   
@@ -90,11 +100,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(MONTHLY_BALANCES_KEY, JSON.stringify(monthlyBalances));
   }, [monthlyBalances]);
+  
+  useEffect(() => {
+    localStorage.setItem(TRANSFER_BALANCE_OPTION_KEY, JSON.stringify(transferBalanceEnabled));
+  }, [transferBalanceEnabled]);
 
   // Calculate monthly balances when time entries change
   useEffect(() => {
     calculateMonthlyBalances();
   }, [timeEntries]);
+  
+  // Função para verificar se é o último dia do mês e transferir saldo se necessário
+  useEffect(() => {
+    const checkMonthEnd = () => {
+      if (transferBalanceEnabled) {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        
+        // Se hoje é o último dia do mês
+        if (today.getMonth() !== tomorrow.getMonth()) {
+          const currentMonth = format(today, "yyyy-MM");
+          
+          // Para cada funcionário, transferir saldo
+          employees.forEach(employee => {
+            transferMonthBalance(employee.id, currentMonth);
+          });
+          
+          toast.success("Saldo do mês transferido automaticamente para o próximo mês!");
+        }
+      }
+    };
+    
+    // Verificar uma vez por dia
+    const intervalId = setInterval(checkMonthEnd, 60 * 60 * 1000); // Verifica a cada hora
+    
+    // Verificar imediatamente na inicialização
+    checkMonthEnd();
+    
+    return () => clearInterval(intervalId);
+  }, [transferBalanceEnabled, employees]);
   
   // Calculate monthly balances for all employees
   const calculateMonthlyBalances = () => {
@@ -173,6 +218,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     setMonthlyBalances(updatedBalances);
     toast.success("Saldo do mês zerado com sucesso!");
+  };
+  
+  // Transferir o saldo de um mês para o próximo
+  const transferMonthBalance = (employeeId: string, fromMonth: string) => {
+    // Encontrar o saldo do mês atual
+    const currentMonthBalance = getMonthBalanceForEmployee(employeeId, fromMonth);
+    
+    if (currentMonthBalance === 0) return; // Não há saldo para transferir
+    
+    // Calcular o próximo mês
+    const [year, month] = fromMonth.split('-');
+    const fromDate = new Date(parseInt(year), parseInt(month) - 1, 1); // Mês em JS começa em 0
+    const nextMonthDate = addMonths(fromDate, 1);
+    const nextMonth = format(nextMonthDate, "yyyy-MM");
+    
+    // Verificar se já existe um saldo para o próximo mês
+    const nextMonthBalanceIndex = monthlyBalances.findIndex(
+      balance => balance.employeeId === employeeId && balance.month === nextMonth
+    );
+    
+    if (nextMonthBalanceIndex >= 0) {
+      // Atualizar saldo existente do próximo mês
+      const updatedBalances = [...monthlyBalances];
+      updatedBalances[nextMonthBalanceIndex].totalBalanceMinutes += currentMonthBalance;
+      setMonthlyBalances(updatedBalances);
+    } else {
+      // Criar novo registro de saldo para o próximo mês
+      setMonthlyBalances([
+        ...monthlyBalances,
+        {
+          month: nextMonth,
+          employeeId,
+          totalBalanceMinutes: currentMonthBalance
+        }
+      ]);
+    }
+    
+    // Zerar o saldo do mês atual
+    resetMonthBalance(employeeId, fromMonth);
+    
+    toast.success(`Saldo transferido para ${format(nextMonthDate, "MMMM yyyy")}`);
+  };
+  
+  // Ativar/desativar a opção de transferência automática de saldo
+  const toggleTransferBalanceOption = (enabled: boolean) => {
+    setTransferBalanceEnabled(enabled);
+    
+    if (enabled) {
+      toast.success("Transferência automática de saldo ativada!");
+    } else {
+      toast.info("Transferência automática de saldo desativada!");
+    }
+  };
+  
+  // Verificar se a opção de transferência de saldo está ativada
+  const isTransferBalanceEnabled = () => {
+    return transferBalanceEnabled;
   };
   
   // Employee CRUD operations
@@ -292,7 +394,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getMonthBalanceForEmployee,
     getAccumulatedBalance,
     isDateInVacation,
-    resetMonthBalance
+    resetMonthBalance,
+    transferMonthBalance,
+    toggleTransferBalanceOption,
+    isTransferBalanceEnabled
   };
   
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -16,6 +16,20 @@ export const formatTime = (time: string): string => {
   // Remove any non-digit characters
   const digits = time.replace(/\D/g, "");
   
+  // If we have 3 digits, add a leading zero
+  if (digits.length === 3) {
+    const hours = digits.substring(0, 1);
+    const minutes = digits.substring(1, 3);
+    
+    // Validate hours and minutes
+    const hoursNum = parseInt(hours, 10);
+    const minutesNum = parseInt(minutes, 10);
+    
+    if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
+      return `0${hours}:${minutes}`;
+    }
+  }
+  
   // If we have 4 digits, format as HH:MM
   if (digits.length === 4) {
     const hours = digits.substring(0, 2);
@@ -28,6 +42,11 @@ export const formatTime = (time: string): string => {
     if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
       return `${hours}:${minutes}`;
     }
+  }
+  
+  // Auto-format during input by adding colon after 2 digits
+  if (digits.length === 2) {
+    return `${digits}:`;
   }
   
   return time;

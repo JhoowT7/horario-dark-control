@@ -45,6 +45,7 @@ export interface SystemSettings {
   maxExtraMinutes: number;
   holidays: string[]; // Array of dates in format YYYY-MM-DD
   vacationPeriods: VacationPeriod[];
+  transferBalance?: boolean; // Nova opção para transferência automática de saldo
 }
 
 export interface VacationPeriod {

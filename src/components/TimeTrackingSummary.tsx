@@ -14,7 +14,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// Import new component files
+// Import component files
 import BalanceBadges from "./timeTracking/BalanceBadges";
 import CalendarView from "./timeTracking/CalendarView";
 import EntriesList from "./timeTracking/EntriesList";
@@ -48,6 +48,9 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   
   // Get current date properly
   const today = new Date();
+  
+  // Check if current visible month is the actual current month
+  const isCurrentMonthVisible = isSameMonth(currentMonth, today);
   
   // Get employee's time entries
   const employeeEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
@@ -229,6 +232,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
             monthlyBalance={monthlyBalance}
             accumulatedBalance={accumulatedBalance}
             resetMonthBalance={handleResetMonthBalance}
+            isCurrentMonth={isCurrentMonthVisible}
           />
         
           <Tabs defaultValue="month">

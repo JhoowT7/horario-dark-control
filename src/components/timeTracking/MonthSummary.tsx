@@ -185,7 +185,7 @@ const MonthSummary: React.FC<MonthSummaryProps> = ({
           </div>
           
           <div className="col-span-2 pt-2 border-t border-gray-700">
-            <div className="text-sm text-gray-400">Saldo acumulado:</div>
+            <div className="text-sm text-gray-400">Saldo atual:</div>
             <div className={`text-lg font-medium flex items-center ${accumulatedBalance > 0 ? 'text-positive' : accumulatedBalance < 0 ? 'text-negative' : ''}`}>
               {accumulatedBalance === 0 ? (
                 <span>00:00</span>

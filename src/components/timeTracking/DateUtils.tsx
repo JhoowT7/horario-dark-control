@@ -4,8 +4,11 @@ import { Employee } from "@/types";
 
 // Format date to YYYY-MM-DD, corrigindo o problema do dia anterior
 export const formatDateString = (date: Date): string => {
-  // Use a formatação direta sem manipulações de timezone
-  return format(date, "yyyy-MM-dd");
+  // Formatação direta para o formato YYYY-MM-DD
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 // Determine if a date is a working day for the employee

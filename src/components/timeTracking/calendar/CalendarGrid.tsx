@@ -1,5 +1,6 @@
+
 import React from "react";
-import { getDay, isWeekend } from "date-fns";
+import { getDay } from "date-fns";
 import { TimeEntry } from "@/types";
 import CalendarDay from "./CalendarDay";
 
@@ -17,7 +18,7 @@ interface CalendarGridProps {
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   daysInMonth,
   getEntryForDate,
-  isWorkingDay: originalIsWorkingDay,
+  isWorkingDay,
   isHolidayDate,
   isVacationDate,
   missingEntries,
@@ -25,11 +26,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onSelectDate,
 }) => {
   const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"]; // Domingo a Sábado
-
-  // Corrige isWorkingDay para marcar sábados e domingos como não úteis
-  const isWorkingDay = (date: Date): boolean => {
-    return !isWeekend(date); // True para segunda a sexta, false para sábado e domingo
-  };
 
   // Calcula o dia da semana do primeiro dia do mês (0 = Domingo, 1 = Segunda, ...)
   const firstDayOfMonth = getDay(daysInMonth[0]);
@@ -51,7 +47,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         const dayOfWeek = getDay(day);
         const dateStr = formatDateString(day);
         const entry = getEntryForDate(day);
-        const isWorkDay = isWorkingDay(day); // Usa a versão corrigida
+        const isWorkDay = isWorkingDay(day);
         const isHoliday = isHolidayDate(day);
         const isVacation = isVacationDate(day);
         const isMissingEntry = missingEntries.includes(dateStr);

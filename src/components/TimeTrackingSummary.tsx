@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Employee, TimeEntry } from "@/types";
 import { useAppContext } from "@/contexts/AppContext";
@@ -74,7 +73,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     const prevMonthBalance = getMonthBalanceForEmployee(employee.id, prevMonthString);
     setPreviousMonthBalance(prevMonthBalance);
     
-    // Total accumulated balance
+    // Total accumulated balance (agora chamado de saldo atual)
     const accumulatedBalanceMinutes = getAccumulatedBalance(employee.id);
     setAccumulatedBalance(accumulatedBalanceMinutes);
     

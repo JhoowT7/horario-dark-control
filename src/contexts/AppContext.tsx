@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Employee, SystemSettings, TimeEntry, MonthlyBalance, VacationPeriod } from "../types";
 import { mockEmployees, mockTimeEntries, defaultSettings } from "../data/mockData";
@@ -46,7 +45,10 @@ const TRANSFER_BALANCE_OPTION_KEY = "timeTracker_transferBalanceOption";
 // Helper to format today's date as YYYY-MM-DD
 const getTodayFormatted = () => {
   const date = new Date();
-  return format(date, "yyyy-MM-dd");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -174,10 +176,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMonthlyBalances(newMonthlyBalances);
   };
   
-  // Get current computer date - Fixed to ensure it gets the current date properly
+  // Get current computer date - Fixed to use the direct method
   const getCurrentDate = () => {
-    const now = new Date();
-    return format(now, "yyyy-MM-dd");
+    return getTodayFormatted();
   };
   
   // Check if a date is within an employee's vacation period
@@ -201,6 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   // Get accumulated balance for an employee (all months)
+  // Renomeado para getAccumulatedBalance mas ainda com a mesma funcionalidade
   const getAccumulatedBalance = (employeeId: string) => {
     return monthlyBalances
       .filter(balance => balance.employeeId === employeeId)
@@ -299,6 +301,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Time entry operations
   const addTimeEntry = (entry: TimeEntry) => {
+    // Adicionar bônus de 4 horas (240 minutos) para feriados
+    if (entry.isHoliday) {
+      entry.balanceMinutes = 240; // 4 horas em minutos
+      entry.workedMinutes = entry.balanceMinutes + (entry.workedMinutes || 0);
+    }
+
     // Check if entry for this employee and date already exists
     const existingEntryIndex = timeEntries.findIndex(
       (e) => e.employeeId === entry.employeeId && e.date === entry.date
@@ -320,6 +328,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const updateTimeEntry = (entry: TimeEntry) => {
+    // Adicionar bônus de 4 horas (240 minutos) para feriados
+    if (entry.isHoliday) {
+      entry.balanceMinutes = 240; // 4 horas em minutos
+      entry.workedMinutes = entry.balanceMinutes + (entry.workedMinutes || 0);
+    }
+    
     setTimeEntries((prev) =>
       prev.map((e) =>
         e.employeeId === entry.employeeId && e.date === entry.date ? entry : e

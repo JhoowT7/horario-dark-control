@@ -190,6 +190,13 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     );
   };
 
+  // Modify the handleSelectDate function to ensure a direct and immediate response
+  const handleSelectDate = (date: string) => {
+    console.log("Date selected:", date);
+    // Directly call onSelectDate without any additional conditions
+    onSelectDate(date);
+  };
+  
   // Handle reset month balance
   const handleResetMonthBalance = () => {
     const monthString = format(currentMonth, "yyyy-MM");
@@ -254,7 +261,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                 isVacationDate={isVacationDate}
                 missingEntries={missingEntries}
                 formatDateString={formatDateString}
-                onSelectDate={onSelectDate}
+                onSelectDate={handleSelectDate}
               />
             </TabsContent>
             

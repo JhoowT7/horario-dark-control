@@ -64,14 +64,21 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   const dayLabel = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dayOfWeek];
   const tooltipText = `${format(day, "dd/MM/yyyy")} - ${dayLabel}`;
   
+  // Create handler directly here to prevent event bubbling issues
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSelectDate(dateStr);
+  };
+  
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             className={dayClass}
-            onClick={() => onSelectDate(dateStr)}
-            // All days are now clickable
+            onClick={handleClick}
+            type="button"
           >
             <div className="text-sm">{format(day, "d")}</div>
             

@@ -39,7 +39,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR });
   
-  // Pass all required props to CalendarGrid component
+  // Create a wrapper for onSelectDate to ensure direct date selection
+  const handleDateSelect = (date: string) => {
+    console.log("Date selected in CalendarView:", date);
+    onSelectDate(date);
+  };
+  
   return (
     <div className="space-y-4">
       <CalendarHeader 
@@ -58,7 +63,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           isVacationDate={isVacationDate}
           missingEntries={missingEntries}
           formatDateString={formatDateString}
-          onSelectDate={onSelectDate}
+          onSelectDate={handleDateSelect}
         />
       </TooltipProvider>
       

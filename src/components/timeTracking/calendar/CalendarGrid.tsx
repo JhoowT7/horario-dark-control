@@ -31,6 +31,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const firstDayOfMonth = getDay(daysInMonth[0]);
   const emptyDays = Array(firstDayOfMonth).fill(null);
 
+  // Function to handle day selection with direct callback
+  const handleDayClick = (dateStr: string) => {
+    onSelectDate(dateStr);
+  };
+
   return (
     <div className="grid grid-cols-7 gap-1 text-center">
       {dayNames.map((day, i) => (
@@ -63,7 +68,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             isVacation={isVacation}
             isMissingEntry={isMissingEntry}
             dayOfWeek={dayOfWeek}
-            onSelectDate={onSelectDate}
+            onSelectDate={handleDayClick}
           />
         );
       })}

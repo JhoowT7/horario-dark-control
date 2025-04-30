@@ -1,3 +1,4 @@
+
 export interface Employee {
   id: string;
   name: string;
@@ -14,10 +15,16 @@ export interface Employee {
     lunchIn: string;
     exit: string;
   };
-  password?: string; // Add password field
-  isAdmin?: boolean; // Add admin flag
+  password?: string;
+  isAdmin?: boolean;
   lastLoginDate?: string;
+  registrationId?: string;
+  contractType?: ContractType;
 }
+
+export type ContractType = "Efetivado" | "Estagiário";
+export type ScheduleType = "5x2" | "6x1" | "Personalizado";
+export type WorkDay = { [key: number]: boolean };
 
 export interface TimeEntry {
   date: string;
@@ -38,6 +45,7 @@ export interface SystemSettings {
   toleranceMinutes: number;
   maxExtraMinutes: number;
   vacationPeriods: VacationPeriod[];
+  transferBalances?: boolean;
 }
 
 export interface VacationPeriod {

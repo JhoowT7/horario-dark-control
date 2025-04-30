@@ -1,5 +1,6 @@
+
 import { v4 as uuidv4 } from "uuid";
-import { Employee, TimeEntry, SystemSettings } from "../types";
+import { Employee, TimeEntry, SystemSettings, ContractType } from "../types";
 
 // Mock employee data
 export const mockEmployees: Employee[] = [
@@ -10,6 +11,8 @@ export const mockEmployees: Employee[] = [
     phone: "(11) 98765-4321",
     position: "Desenvolvedor",
     department: "TI",
+    registrationId: "EMP001",
+    contractType: "Efetivado",
     scheduleType: "5x2",
     expectedMinutesPerDay: 480, // 8 horas
     workSchedule: {
@@ -28,6 +31,8 @@ export const mockEmployees: Employee[] = [
     phone: "(11) 91234-5678",
     position: "Designer",
     department: "Marketing",
+    registrationId: "EMP002",
+    contractType: "Efetivado",
     scheduleType: "6x1",
     expectedMinutesPerDay: 420, // 7 horas
     workSchedule: {
@@ -45,6 +50,8 @@ export const mockEmployees: Employee[] = [
     phone: "(11) 97777-8888",
     position: "Contador",
     department: "Financeiro",
+    registrationId: "EMP003",
+    contractType: "Estagiário",
     scheduleType: "Personalizado",
     workDays: {
       0: false, // Domingo
@@ -80,7 +87,8 @@ export const defaultSettings: SystemSettings = {
     "2025-11-15", // Republic Proclamation Day
     "2025-12-25"  // Christmas Day
   ],
-  vacationPeriods: []
+  vacationPeriods: [],
+  transferBalances: false
 };
 
 // Mock time entries
@@ -95,6 +103,7 @@ export const mockTimeEntries: TimeEntry[] = [
     workedMinutes: 530,
     balanceMinutes: 0,
     isHoliday: false,
+    isVacation: false,
     notes: "Dia normal de trabalho"
   },
   {
@@ -107,6 +116,7 @@ export const mockTimeEntries: TimeEntry[] = [
     workedMinutes: 540,
     balanceMinutes: 10,
     isHoliday: false,
+    isVacation: false,
     notes: "Compensação pelo atraso no retorno do almoço"
   }
 ];

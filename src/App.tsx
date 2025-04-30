@@ -25,11 +25,13 @@ const AppContent = () => {
     selectedDate, 
     setSelectedDate, 
     getCurrentDate, 
-    setSelectedEmployee 
+    setSelectedEmployee,
+    employees
   } = useAppContext();
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState("timeTracking");
+  const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   
   // Always reset to today's date on load
   useEffect(() => {
@@ -53,6 +55,18 @@ const AppContent = () => {
   const handleLogout = () => {
     setSelectedEmployee(null);
     setIsLoggedIn(false);
+  };
+
+  const handleAddNewEmployee = () => {
+    setShowNewEmployeeForm(true);
+  };
+
+  const handleCancelEmployeeForm = () => {
+    setShowNewEmployeeForm(false);
+  };
+
+  const handleSelectEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
   };
   
   // If not logged in, show login form
@@ -127,7 +141,16 @@ const AppContent = () => {
         </TabsContent>
         
         <TabsContent value="employees">
-          {isAdmin && <EmployeeList />}
+          {isAdmin && (
+            showNewEmployeeForm ? (
+              <EmployeeForm onCancel={handleCancelEmployeeForm} />
+            ) : (
+              <EmployeeList 
+                onAddNew={handleAddNewEmployee}
+                onSelect={handleSelectEmployee}
+              />
+            )
+          )}
         </TabsContent>
         
         <TabsContent value="settings">

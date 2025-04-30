@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Employee, ContractType, ScheduleType, WorkDay } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,11 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
   const [lunchOutTime, setLunchOutTime] = useState(initialData?.workSchedule.lunchOut || "12:00");
   const [lunchInTime, setLunchInTime] = useState(initialData?.workSchedule.lunchIn || "13:00");
   const [exitTime, setExitTime] = useState(initialData?.workSchedule.exit || "17:00");
+  const [email, setEmail] = useState(initialData?.email || "");
+  const [phone, setPhone] = useState(initialData?.phone || "");
+  const [department, setDepartment] = useState(initialData?.department || "");
+  const [password, setPassword] = useState(initialData?.password || "senha123");
+  const [isAdmin, setIsAdmin] = useState(initialData?.isAdmin || false);
   
   // Handle schedule type change to update work days automatically
   const handleScheduleTypeChange = (value: ScheduleType) => {
@@ -111,9 +117,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
     const employeeData: Employee = {
       id: initialData?.id || Math.random().toString(36).substring(2, 9),
       name,
-      registrationId,
+      email,
+      phone,
       position,
+      department,
       contractType,
+      registrationId,
       scheduleType,
       workDays,
       workSchedule: {
@@ -122,7 +131,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
         lunchIn: lunchInTime,
         exit: exitTime
       },
-      expectedMinutesPerDay
+      expectedMinutesPerDay,
+      password,
+      isAdmin
     };
     
     if (initialData) {
@@ -176,17 +187,55 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Email do funcionário"
+                className="bg-gray-800 border-gray-700"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input 
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Telefone do funcionário"
+                className="bg-gray-800 border-gray-700"
+              />
+            </div>
+          </div>
           
-          <div>
-            <Label htmlFor="position">Cargo</Label>
-            <Input 
-              id="position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              required
-              placeholder="Cargo do funcionário"
-              className="bg-gray-800 border-gray-700"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="position">Cargo</Label>
+              <Input 
+                id="position"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                required
+                placeholder="Cargo do funcionário"
+                className="bg-gray-800 border-gray-700"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">Departamento</Label>
+              <Input 
+                id="department"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                required
+                placeholder="Departamento"
+                className="bg-gray-800 border-gray-700"
+              />
+            </div>
           </div>
           
           <div className="space-y-2">
@@ -298,6 +347,32 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
                 {Math.floor(calculateExpectedMinutes() / 60)}h{calculateExpectedMinutes() % 60}min
               </span> por dia
             </p>
+          </div>
+
+          <div className="space-y-2 border-t border-gray-700 pt-4">
+            <Label>Configurações de Acesso</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="password">Senha</Label>
+                <Input 
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Senha para acesso"
+                  className="bg-gray-800 border-gray-700"
+                />
+              </div>
+              <div className="flex items-center space-x-2 mt-7">
+                <Checkbox
+                  id="is-admin"
+                  checked={isAdmin}
+                  onCheckedChange={(checked) => setIsAdmin(checked === true)}
+                />
+                <Label htmlFor="is-admin">Administrador do sistema</Label>
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-end space-x-2">

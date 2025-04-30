@@ -22,7 +22,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ onAddNew, onSelect }) => {
   // Filter employees based on search term
   const filteredEmployees = employees.filter((employee) => 
     employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.registrationId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (employee.registrationId && employee.registrationId.toLowerCase().includes(searchTerm.toLowerCase())) ||
     employee.position.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
@@ -83,9 +83,9 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ onAddNew, onSelect }) => {
                     >
                       <h3 className="font-medium">{employee.name}</h3>
                       <div className="flex flex-col sm:flex-row sm:gap-4 text-sm text-gray-400">
-                        <span>ID: {employee.registrationId}</span>
+                        {employee.registrationId && <span>ID: {employee.registrationId}</span>}
                         <span>{employee.position}</span>
-                        <span>{employee.contractType} • {employee.scheduleType}</span>
+                        {employee.contractType && <span>{employee.contractType} • {employee.scheduleType}</span>}
                       </div>
                     </button>
                     

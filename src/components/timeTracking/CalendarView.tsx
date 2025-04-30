@@ -1,6 +1,7 @@
+
 import React from "react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale"; // Adicione esta linha
+import { ptBR } from "date-fns/locale";
 import { TimeEntry } from "@/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import CalendarHeader from "./calendar/CalendarHeader";
@@ -36,8 +37,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   formatDateString,
   onSelectDate
 }) => {
-  const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR }); // Corrigido aqui
+  const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR });
   
+  // Pass all required props to CalendarGrid component
   return (
     <div className="space-y-4">
       <CalendarHeader 

@@ -1,33 +1,26 @@
-
-export type ContractType = "Efetivado" | "Estagiário";
-
-export type ScheduleType = "5x2" | "6x1" | "Personalizado";
-
-export interface WorkSchedule {
-  entry: string; // Format HH:MM
-  lunchOut: string; // Format HH:MM
-  lunchIn: string; // Format HH:MM
-  exit: string; // Format HH:MM
-}
-
-export type WorkDay = {
-  [key: number]: boolean; // 0 = Sunday, 1 = Monday, etc.
-};
-
 export interface Employee {
   id: string;
   name: string;
-  registrationId: string;
+  email: string;
+  phone?: string;
   position: string;
-  contractType: ContractType;
-  scheduleType: ScheduleType;
-  workDays: WorkDay;
-  workSchedule: WorkSchedule;
+  department: string;
+  scheduleType: "5x2" | "6x1" | "Personalizado";
+  workDays?: { [key: number]: boolean };
   expectedMinutesPerDay: number;
+  workSchedule: {
+    entry: string;
+    lunchOut: string;
+    lunchIn: string;
+    exit: string;
+  };
+  password?: string; // Add password field
+  isAdmin?: boolean; // Add admin flag
+  lastLoginDate?: string;
 }
 
 export interface TimeEntry {
-  date: string; // YYYY-MM-DD
+  date: string;
   employeeId: string;
   entry: string;
   lunchOut: string;
@@ -36,26 +29,25 @@ export interface TimeEntry {
   workedMinutes: number;
   balanceMinutes: number;
   isHoliday: boolean;
-  isVacation?: boolean;
+  isVacation: boolean;
   notes?: string;
 }
 
 export interface SystemSettings {
+  holidays: string[];
   toleranceMinutes: number;
   maxExtraMinutes: number;
-  holidays: string[]; // Array of dates in format YYYY-MM-DD
   vacationPeriods: VacationPeriod[];
-  transferBalance?: boolean; // Nova opção para transferência automática de saldo
 }
 
 export interface VacationPeriod {
   employeeId: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
+  startDate: string;
+  endDate: string;
 }
 
 export interface MonthlyBalance {
-  month: string; // YYYY-MM format
+  month: string;
   employeeId: string;
   totalBalanceMinutes: number;
 }

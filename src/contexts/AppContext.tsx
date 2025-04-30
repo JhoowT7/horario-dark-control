@@ -299,14 +299,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.info("Funcionário removido do sistema");
   };
   
-  // Time entry operations
+  // Modificando addTimeEntry para lidar corretamente com feriados
   const addTimeEntry = (entry: TimeEntry) => {
-    // Adicionar bônus de 4 horas (240 minutos) para feriados
-    if (entry.isHoliday) {
-      entry.balanceMinutes = 240; // 4 horas em minutos
-      entry.workedMinutes = entry.balanceMinutes + (entry.workedMinutes || 0);
-    }
-
     // Check if entry for this employee and date already exists
     const existingEntryIndex = timeEntries.findIndex(
       (e) => e.employeeId === entry.employeeId && e.date === entry.date

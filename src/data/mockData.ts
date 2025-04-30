@@ -1,57 +1,69 @@
-
-import { Employee, SystemSettings, TimeEntry } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { Employee, TimeEntry, SystemSettings } from "../types";
 
-// Mock employees
+// Mock employee data
 export const mockEmployees: Employee[] = [
   {
-    id: uuidv4(),
+    id: "1",
     name: "João Silva",
-    registrationId: "EMP001",
+    email: "joao.silva@empresa.com",
+    phone: "(11) 98765-4321",
     position: "Desenvolvedor",
-    contractType: "Efetivado",
+    department: "TI",
     scheduleType: "5x2",
-    workDays: {
-      0: false, // Sunday
-      1: true,  // Monday
-      2: true,  // Tuesday
-      3: true,  // Wednesday
-      4: true,  // Thursday
-      5: true,  // Friday
-      6: false  // Saturday
-    },
+    expectedMinutesPerDay: 480, // 8 horas
     workSchedule: {
       entry: "08:00",
       lunchOut: "12:00",
       lunchIn: "13:00",
-      exit: "17:50"
+      exit: "17:00",
     },
-    expectedMinutesPerDay: 530 // 8 hours and 50 minutes
+    isAdmin: true, // Admin user
+    password: "admin123"
   },
   {
-    id: uuidv4(),
-    name: "Maria Oliveira",
-    registrationId: "EMP002",
+    id: "2",
+    name: "Maria Souza",
+    email: "maria.souza@empresa.com",
+    phone: "(11) 91234-5678",
     position: "Designer",
-    contractType: "Estagiário",
+    department: "Marketing",
     scheduleType: "6x1",
-    workDays: {
-      0: false, // Sunday
-      1: true,  // Monday
-      2: true,  // Tuesday
-      3: true,  // Wednesday
-      4: true,  // Thursday
-      5: true,  // Friday
-      6: true   // Saturday
-    },
+    expectedMinutesPerDay: 420, // 7 horas
     workSchedule: {
       entry: "09:00",
-      lunchOut: "12:00",
-      lunchIn: "13:00",
-      exit: "17:00"
+      lunchOut: "12:30",
+      lunchIn: "13:30",
+      exit: "17:00",
     },
-    expectedMinutesPerDay: 420 // 7 hours
-  }
+    password: "senha"
+  },
+  {
+    id: "3",
+    name: "Pedro Santos",
+    email: "pedro.santos@empresa.com",
+    phone: "(11) 97777-8888",
+    position: "Contador",
+    department: "Financeiro",
+    scheduleType: "Personalizado",
+    workDays: {
+      0: false, // Domingo
+      1: true,  // Segunda
+      2: true,  // Terça
+      3: true,  // Quarta
+      4: true,  // Quinta
+      5: true,  // Sexta
+      6: false, // Sábado
+    },
+    expectedMinutesPerDay: 360, // 6 horas
+    workSchedule: {
+      entry: "10:00",
+      lunchOut: "13:00",
+      lunchIn: "14:00",
+      exit: "17:00",
+    },
+    password: "senha"
+  },
 ];
 
 // Default system settings

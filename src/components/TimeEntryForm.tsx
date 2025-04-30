@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { Employee, TimeEntry } from "@/types";
@@ -68,27 +67,21 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       // Holiday calculations based on schedule type
       let holidayBalance = 0;
       
-      if (employee.scheduleType === "5x2") {
-        // Get day of week (0 = Sunday, 6 = Saturday)
-        const dayOfWeek = new Date(date).getDay();
-        
-        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-          // Weekday holiday for 5x2: funcionário deve 50 minutos
-          holidayBalance = -50;
-          setCalculationMessage("Feriado durante a semana: -50 minutos no banco de horas");
-        } else if (dayOfWeek === 6) {
-          // Saturday holiday for 5x2: funcionário ganha 4 horas
-          holidayBalance = 4 * 60;
-          setCalculationMessage("Feriado no sábado: +4 horas no banco de horas");
-        } else {
-          // Sunday holiday: no effect
-          holidayBalance = 0;
-          setCalculationMessage("Feriado no domingo: sem impacto no banco de horas");
-        }
+      // Get day of week (0 = Sunday, 6 = Saturday)
+      const dayOfWeek = new Date(date).getDay();
+      
+      if (dayOfWeek === 6) {
+        // Saturday holiday: always +4 hours (240 minutes)
+        holidayBalance = 4 * 60;
+        setCalculationMessage("Feriado no sábado: +4 horas no banco de horas");
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Weekday holiday: -50 minutes
+        holidayBalance = -50;
+        setCalculationMessage("Feriado durante a semana: -50 minutos no banco de horas");
       } else {
-        // For 6x1 schedules: holiday just nullifies the day
+        // Sunday holiday: no effect
         holidayBalance = 0;
-        setCalculationMessage("Feriado: dia anulado (sem débito ou crédito)");
+        setCalculationMessage("Feriado no domingo: sem impacto no banco de horas");
       }
       
       setWorkedMinutes(0);

@@ -2,9 +2,9 @@
 import { format, parseISO, isWithinInterval, getDay } from "date-fns";
 import { Employee } from "@/types";
 
-// Format date to YYYY-MM-DD, corrigindo o problema do dia anterior
+// Format date to YYYY-MM-DD without timezone adjustments
 export const formatDateString = (date: Date): string => {
-  // Formatação direta para o formato YYYY-MM-DD
+  // Using direct string manipulation to avoid timezone issues
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

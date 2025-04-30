@@ -35,12 +35,12 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   onSelectDate
 }) => {
   // Determine day styling
-  let dayClass = "p-2 rounded-md transition-colors";
+  let dayClass = "p-2 rounded-md transition-colors cursor-pointer"; // Always cursor-pointer
   
   if (isToday(day)) {
     dayClass += " border border-cyanBlue/50";
   } else {
-    dayClass += " hover:bg-gray-800 cursor-pointer";
+    dayClass += " hover:bg-gray-800";
   }
   
   if (isVacation) {
@@ -58,7 +58,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   } else if (isMissingEntry) {
     dayClass += " bg-negative/5 border border-negative/20";
   } else if (!isWorkDay) {
-    dayClass += " text-gray-600 bg-transparent"; // Fins de semana podem ser clicados, apenas estilo diferente
+    dayClass += " text-gray-600 bg-transparent"; // Still clickable but styled differently
   }
   
   const dayLabel = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dayOfWeek];
@@ -71,7 +71,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
           <button
             className={dayClass}
             onClick={() => onSelectDate(dateStr)}
-            // Removida a desativação para dias não úteis - todos os dias podem ser clicados
+            // All days are now clickable
           >
             <div className="text-sm">{format(day, "d")}</div>
             

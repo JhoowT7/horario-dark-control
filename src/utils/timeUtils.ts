@@ -1,4 +1,3 @@
-
 // Function to validate time format (HH:MM)
 export const isValidTimeFormat = (time: string): boolean => {
   if (!time) return false;
@@ -16,15 +15,15 @@ export const formatTime = (time: string): string => {
   // Remove any non-digit characters
   const digits = time.replace(/\D/g, "");
   
-  // Se tiver 2 dígitos, formatamos como HH:
+  // Handle different input cases
   if (digits.length === 2) {
-    if (parseInt(digits, 10) <= 23) {
-      return `${digits}:`;
+    // If only 2 digits (like "08"), format as hours
+    const hoursNum = parseInt(digits, 10);
+    if (hoursNum <= 23) {
+      return `${digits}:00`;
     }
-  }
-  
-  // Se tiver 3 dígitos (1 hora + 2 minutos)
-  if (digits.length === 3) {
+  } else if (digits.length === 3) {
+    // If 3 digits (like "130" for 1:30), format properly
     const hours = digits.substring(0, 1);
     const minutes = digits.substring(1, 3);
     
@@ -35,10 +34,8 @@ export const formatTime = (time: string): string => {
     if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
       return `0${hours}:${minutes}`;
     }
-  }
-  
-  // Se tiver 4 dígitos (2 horas + 2 minutos)
-  if (digits.length === 4) {
+  } else if (digits.length === 4) {
+    // If 4 digits (like "0830" for 8:30), format properly
     const hours = digits.substring(0, 2);
     const minutes = digits.substring(2, 4);
     
@@ -51,8 +48,8 @@ export const formatTime = (time: string): string => {
     }
   }
   
-  // Auto-format durante a digitação adicionando : após 2 dígitos
-  if (digits.length >= 2 && digits.length < 4) {
+  // If we cannot format, try to insert colon after first 2 digits
+  if (digits.length >= 2) {
     return `${digits.substring(0, 2)}:${digits.substring(2)}`;
   }
   

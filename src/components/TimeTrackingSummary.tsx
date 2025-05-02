@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Employee, TimeEntry } from "@/types";
 import { useAppContext } from "@/contexts/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,9 +45,6 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     totalWorkingDays: 0,
     filledDays: 0,
   });
-
-  // REF to track month navigation to prevent unwanted resets
-  const isMonthNavigating = useRef(false);
   
   // Get current date properly
   const today = new Date();
@@ -151,34 +148,19 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   
   // Navigate to previous month - fixing the double-click issue
   const goToPreviousMonth = () => {
-    isMonthNavigating.current = true;
     const prevMonth = subMonths(currentMonth, 1);
     setCurrentMonth(prevMonth);
-    // Reset flag after navigation
-    setTimeout(() => {
-      isMonthNavigating.current = false;
-    }, 100);
   };
   
   // Navigate to next month
   const goToNextMonth = () => {
-    isMonthNavigating.current = true;
     const nextMonth = addMonths(currentMonth, 1);
     setCurrentMonth(nextMonth);
-    // Reset flag after navigation
-    setTimeout(() => {
-      isMonthNavigating.current = false;
-    }, 100);
   };
   
   // Go to current month
   const goToCurrentMonth = () => {
-    isMonthNavigating.current = true;
     setCurrentMonth(new Date(today));
-    // Reset flag after navigation
-    setTimeout(() => {
-      isMonthNavigating.current = false;
-    }, 100);
   };
   
   // Format the month title
@@ -212,12 +194,9 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     );
   };
 
-  // Fixed to ensure direct and immediate response when clicking on a day
+  // Simplified direct selection handler - no flags or delays
   const handleSelectDate = (date: string) => {
-    // Only process if we're not currently navigating between months
-    if (!isMonthNavigating.current) {
-      onSelectDate(date);
-    }
+    onSelectDate(date);
   };
   
   // Handle reset month balance

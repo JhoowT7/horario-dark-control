@@ -19,6 +19,12 @@ const MissingEntriesList: React.FC<MissingEntriesListProps> = ({
   onSelectDate,
   employee
 }) => {
+  // Handle missing entry click directly
+  const handleMissingEntryClick = (dateStr: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    onSelectDate(dateStr);
+  };
+
   return (
     <div>
       <div className="mb-4 flex justify-between items-center">
@@ -39,7 +45,7 @@ const MissingEntriesList: React.FC<MissingEntriesListProps> = ({
               <button
                 key={dateStr}
                 className="w-full text-left bg-negative/5 hover:bg-negative/10 p-3 rounded-md transition-colors border border-negative/20"
-                onClick={() => onSelectDate(dateStr)}
+                onClick={(e) => handleMissingEntryClick(dateStr, e)}
               >
                 <div className="flex justify-between items-center">
                   <div>

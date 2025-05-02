@@ -39,6 +39,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR });
   
+  // Direct handler to avoid any delays
+  const handleSelectDate = (date: string) => {
+    onSelectDate(date);
+  };
+  
   return (
     <div className="space-y-4">
       <CalendarHeader 
@@ -57,7 +62,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           isVacationDate={isVacationDate}
           missingEntries={missingEntries}
           formatDateString={formatDateString}
-          onSelectDate={onSelectDate}
+          onSelectDate={handleSelectDate}
         />
       </TooltipProvider>
       

@@ -1,4 +1,3 @@
-
 // Import necessary types
 import { v4 as uuidv4 } from "uuid";
 import { Employee, TimeEntry, SystemSettings, WorkDay, ContractType, ScheduleType, VacationPeriod, UserProfile } from "../types";
@@ -32,7 +31,8 @@ export const mockEmployees: Employee[] = [
     },
     startDate: "2023-01-15",
     registrationId: "12345",
-    password: "senha"
+    password: "senha",
+    isAdmin: false
   },
   {
     id: "e002",
@@ -61,7 +61,8 @@ export const mockEmployees: Employee[] = [
     },
     startDate: "2022-03-10",
     registrationId: "23456",
-    password: "senha"
+    password: "senha",
+    isAdmin: false
   },
   {
     id: "e003",
@@ -90,7 +91,38 @@ export const mockEmployees: Employee[] = [
     },
     startDate: "2023-05-22",
     registrationId: "34567",
-    password: "senha"
+    password: "senha",
+    isAdmin: false
+  },
+  {
+    id: "admin",
+    name: "Administrador",
+    email: "admin@example.com",
+    phone: "(11) 99999-9999",
+    department: "Administração",
+    position: "Administrador do Sistema",
+    contractType: "CLT" as ContractType,
+    scheduleType: "5x2" as ScheduleType,
+    workDays: {
+      0: false, // Sunday
+      1: true,  // Monday
+      2: true,  // Tuesday
+      3: true,  // Wednesday
+      4: true,  // Thursday
+      5: true,  // Friday
+      6: false  // Saturday
+    },
+    expectedMinutesPerDay: 480, // 8 hours
+    workSchedule: {
+      entry: "08:00",
+      lunchOut: "12:00",
+      lunchIn: "13:00",
+      exit: "17:00"
+    },
+    startDate: "2022-01-01",
+    registrationId: "00000",
+    password: "admin",
+    isAdmin: true
   }
 ];
 
@@ -159,6 +191,7 @@ export const mockUsers: UserProfile[] = [
     email: "admin@example.com",
     password: "admin",
     role: "admin",
+    employeeId: "admin",
     lastLogin: "2023-09-01T10:00:00Z"
   },
   {

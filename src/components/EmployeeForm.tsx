@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Employee, ContractType, ScheduleType, WorkDay } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
   const [name, setName] = useState(initialData?.name || "");
   const [registrationId, setRegistrationId] = useState(initialData?.registrationId || "");
   const [position, setPosition] = useState(initialData?.position || "");
-  const [contractType, setContractType] = useState<ContractType>(initialData?.contractType || "Efetivado");
+  const [contractType, setContractType] = useState<ContractType>(initialData?.contractType || "CLT");
   const [scheduleType, setScheduleType] = useState<ScheduleType>(initialData?.scheduleType || "5x2");
   const [workDays, setWorkDays] = useState<WorkDay>(initialData?.workDays || defaultWorkDays);
   const [entryTime, setEntryTime] = useState(initialData?.workSchedule.entry || "08:00");
@@ -133,6 +132,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
       },
       expectedMinutesPerDay,
       password,
+      startDate: initialData?.startDate || new Date().toISOString().split('T')[0],
       isAdmin
     };
     
@@ -246,12 +246,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ initialData, onCancel }) =>
               className="flex space-x-4"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Efetivado" id="efetivado" />
-                <Label htmlFor="efetivado">Efetivado</Label>
+                <RadioGroupItem value="CLT" id="clt" />
+                <Label htmlFor="clt">CLT</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Estagiário" id="estagiario" />
-                <Label htmlFor="estagiario">Estagiário</Label>
+                <RadioGroupItem value="PJ" id="pj" />
+                <Label htmlFor="pj">PJ</Label>
               </div>
             </RadioGroup>
           </div>

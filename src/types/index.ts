@@ -29,6 +29,7 @@ export interface Employee {
   startDate: string;
   registrationId: string;
   password: string;
+  isAdmin?: boolean; // Add isAdmin property
 }
 
 // Time entry for daily time tracking

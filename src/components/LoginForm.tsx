@@ -29,7 +29,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         // Check password - default is "senha" if not set
         const correctPassword = employee.password || "senha";
         
-        if (password === correctPassword || (employee.isAdmin && password === "admin")) {
+        if (password === correctPassword) {
           setSelectedEmployee(employee);
           
           if (employee.isAdmin) {

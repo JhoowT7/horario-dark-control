@@ -93,7 +93,7 @@ const AppContent = () => {
     );
   }
   
-  // Check if user is admin
+  // Check if user is admin - safely check the property
   const isAdmin = selectedEmployee.isAdmin === true;
   
   return (

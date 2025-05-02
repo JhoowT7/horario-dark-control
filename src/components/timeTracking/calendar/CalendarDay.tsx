@@ -18,8 +18,8 @@ interface CalendarDayProps {
 
 // Helper function to convert minutes to time string
 const minutesToTime = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  const hours = Math.floor(Math.abs(minutes) / 60);
+  const mins = Math.abs(minutes) % 60;
   return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
 };
 
@@ -64,18 +64,13 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   const dayLabel = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dayOfWeek];
   const tooltipText = `${format(day, "dd/MM/yyyy")} - ${dayLabel}`;
   
-  // Create handler directly here to prevent event bubbling issues
-  const handleClick = () => {
-    onSelectDate(dateStr);
-  };
-  
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             className={dayClass}
-            onClick={handleClick}
+            onClick={() => onSelectDate(dateStr)}
             type="button"
           >
             <div className="text-sm">{format(day, "d")}</div>

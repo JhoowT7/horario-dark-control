@@ -1,406 +1,152 @@
-import { Employee, TimeEntry, SystemSettings } from "@/types";
 
-// Mock data for employees
+import { Employee, TimeEntry, SystemSettings } from "@/types";
+import { v4 as uuidv4 } from "uuid";
+
+// Mock employees
 export const mockEmployees: Employee[] = [
   {
-    id: "1",
+    id: "admin-123",
     name: "Admin",
-    email: "admin@example.com",
-    phone: "11 99999-9999",
-    position: "Administrador do Sistema",
-    department: "TI",
+    email: "admin@empresa.com",
+    position: "Administrador",
+    expectedMinutesPerDay: 480, // 8 hours
+    isAdmin: true,
+    password: "admin",
     scheduleType: "5x2",
     workDays: {
-      0: false, // Domingo
-      1: true,  // Segunda
-      2: true,  // Terça
-      3: true,  // Quarta
-      4: true,  // Quinta
-      5: true,  // Sexta
-      6: false, // Sábado
+      0: false, // Sunday
+      1: true,  // Monday
+      2: true,  // Tuesday
+      3: true,  // Wednesday
+      4: true,  // Thursday
+      5: true,  // Friday
+      6: false  // Saturday
     },
-    expectedMinutesPerDay: 480, // 8 hours
     workSchedule: {
       entry: "08:00",
       lunchOut: "12:00",
       lunchIn: "13:00",
-      exit: "17:00",
+      exit: "17:00"
     },
-    password: "admin",
-    isAdmin: true,
-    lastLoginDate: new Date().toISOString().split('T')[0],
-    registrationId: "ADMIN001",
-    contractType: "Efetivado"
+    registrationId: "ADM001", // Registration ID
+    contractType: "CLT"
   },
   {
-    id: "2",
+    id: "emp-123",
     name: "João Silva",
-    email: "joao.silva@example.com",
-    phone: "11 98888-7777",
+    email: "joao.silva@empresa.com",
     position: "Desenvolvedor",
-    department: "TI",
+    expectedMinutesPerDay: 480, // 8 hours
+    isAdmin: false,
+    password: "senha",
     scheduleType: "5x2",
     workDays: {
-      0: false, // Domingo
-      1: true,  // Segunda
-      2: true,  // Terça
-      3: true,  // Quarta
-      4: true,  // Quinta
-      5: true,  // Sexta
-      6: false, // Sábado
+      0: false, // Sunday
+      1: true,  // Monday
+      2: true,  // Tuesday
+      3: true,  // Wednesday
+      4: true,  // Thursday
+      5: true,  // Friday
+      6: false  // Saturday
     },
+    workSchedule: {
+      entry: "08:00",
+      lunchOut: "12:00",
+      lunchIn: "13:00",
+      exit: "17:00"
+    },
+    registrationId: "DEV001", // Registration ID
+    contractType: "CLT"
+  },
+  {
+    id: "emp-456",
+    name: "Maria Santos",
+    email: "maria.santos@empresa.com",
+    position: "Designer",
     expectedMinutesPerDay: 480, // 8 hours
+    isAdmin: false,
+    password: "senha",
+    scheduleType: "5x2",
+    workDays: {
+      0: false, // Sunday
+      1: true,  // Monday
+      2: true,  // Tuesday
+      3: true,  // Wednesday
+      4: true,  // Thursday
+      5: true,  // Friday
+      6: false  // Saturday
+    },
     workSchedule: {
       entry: "09:00",
-      lunchOut: "12:00",
-      lunchIn: "13:00",
-      exit: "18:00",
+      lunchOut: "12:30",
+      lunchIn: "13:30",
+      exit: "18:00"
     },
-    password: "senha",
-    isAdmin: false,
-    registrationId: "DEV001",
-    contractType: "Efetivado"
-  },
-  {
-    id: "3",
-    name: "Maria Oliveira",
-    email: "maria.oliveira@example.com",
-    phone: "11 97777-6666",
-    position: "Analista de RH",
-    department: "RH",
-    scheduleType: "6x1",
-    workDays: {
-      0: false, // Domingo
-      1: true,  // Segunda
-      2: true,  // Terça
-      3: true,  // Quarta
-      4: true,  // Quinta
-      5: true,  // Sexta
-      6: true  // Sábado
-    },
-    expectedMinutesPerDay: 480, // 8 hours
-    workSchedule: {
-      entry: "08:00",
-      lunchOut: "12:00",
-      lunchIn: "13:00",
-      exit: "17:00",
-    },
-    isAdmin: false,
-    registrationId: "RH001",
-    contractType: "Efetivado"
-  },
-  {
-    id: "4",
-    name: "Carlos Pereira",
-    email: "carlos.pereira@example.com",
-    phone: "11 96666-5555",
-    position: "Estagiário",
-    department: "Marketing",
-    scheduleType: "5x2",
-    workDays: {
-      0: false, // Domingo
-      1: true,  // Segunda
-      2: true,  // Terça
-      3: true,  // Quarta
-      4: true,  // Quinta
-      5: true,  // Sexta
-      6: false // Sábado
-    },
-    expectedMinutesPerDay: 360, // 6 hours
-    workSchedule: {
-      entry: "10:00",
-      lunchOut: "13:00",
-      lunchIn: "14:00",
-      exit: "17:00",
-    },
-    isAdmin: false,
-    registrationId: "EST001",
-    contractType: "Estagiário"
-  },
+    registrationId: "DES001", // Registration ID
+    contractType: "PJ"
+  }
 ];
 
-// Mock data for time entries
-export const mockTimeEntries: TimeEntry[] = [
-  {
-    date: "2025-04-01",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-04-02",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-04-15",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-04-03",
-    employeeId: "3",
-    entry: "08:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "17:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-04-01",
-    employeeId: "4",
-    entry: "10:00",
-    lunchOut: "13:00",
-    lunchIn: "14:00",
-    exit: "17:00",
-    workedMinutes: 360,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-05-10",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-05-10",
-    employeeId: "3",
-    entry: "08:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "17:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-05-11",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-05-12",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-05-13",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-05-14",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-06-15",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-06-16",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-06-17",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-06-18",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-06-19",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-07-20",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-07-21",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-07-22",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-07-23",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-  {
-    date: "2025-07-24",
-    employeeId: "2",
-    entry: "09:00",
-    lunchOut: "12:00",
-    lunchIn: "13:00",
-    exit: "18:00",
-    workedMinutes: 480,
-    balanceMinutes: 0,
-    isHoliday: false,
-    isVacation: false,
-    notes: "Dia normal de trabalho"
-  },
-];
+// Generate some mock time entries for the current and previous month
+export const mockTimeEntries: TimeEntry[] = [];
 
-// Mock system settings
+// Helper to get random minutes (-30 to +30)
+const getRandomMinutes = () => Math.floor(Math.random() * 60) - 30;
+
+// Generate dates - 30 days before today, up to today
+const today = new Date();
+for (let i = 30; i >= 0; i--) {
+  const date = new Date(today);
+  date.setDate(date.getDate() - i);
+  
+  // Skip weekends for 5x2 employees
+  const dayOfWeek = date.getDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+  
+  const dateString = date.toISOString().split('T')[0];
+  
+  // Add entries for João Silva
+  mockTimeEntries.push({
+    date: dateString,
+    employeeId: "emp-123",
+    entry: "08:05",
+    lunchOut: "12:00",
+    lunchIn: "13:00",
+    exit: "17:00",
+    workedMinutes: 475, // 7h55min
+    balanceMinutes: -5,
+    isHoliday: false,
+    isVacation: false,
+    notes: ""
+  });
+  
+  // Add entries for Maria Santos
+  mockTimeEntries.push({
+    date: dateString,
+    employeeId: "emp-456",
+    entry: "09:00",
+    lunchOut: "12:30",
+    lunchIn: "13:30",
+    exit: "18:15",
+    workedMinutes: 495, // 8h15min
+    balanceMinutes: 15,
+    isHoliday: false,
+    isVacation: false,
+    notes: ""
+  });
+}
+
+// Default system settings
 export const defaultSettings: SystemSettings = {
-  holidays: ["2024-01-01", "2024-04-21", "2024-05-01", "2024-09-07", "2024-11-15", "2024-12-25"],
-  toleranceMinutes: 10,
-  maxExtraMinutes: 60,
-  vacationPeriods: [],
-  transferBalances: false
+  toleranceMinutes: 5,
+  maxExtraMinutes: 10,
+  holidays: [
+    "2025-01-01", // New Year's Day
+    "2025-04-18", // Good Friday
+    "2025-04-21", // Easter Monday
+    "2025-05-01", // Labor Day
+    "2025-12-25", // Christmas
+    "2025-12-31"  // New Year's Eve
+  ],
+  vacationPeriods: []
 };

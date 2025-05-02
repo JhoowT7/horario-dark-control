@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock, Palmtree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance, generateBalanceMessage } from "@/utils/timeUtils";
-import { parseISO, format, differenceInCalendarDays } from "date-fns";
+import { parseISO, format, differenceInCalendarDays, getDay } from "date-fns";
 
 interface TimeEntryFormProps {
   employee: Employee;
@@ -64,28 +64,25 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     }
     
     if (isHoliday) {
-      // Holiday calculations based on schedule type
-      let holidayBalance = 0;
-      
       // Get day of week (0 = Sunday, 6 = Saturday)
-      const dayOfWeek = new Date(date).getDay();
+      const dayOfWeek = getDay(new Date(date));
       
-      if (dayOfWeek === 6) {
-        // Saturday holiday: always +4 hours (240 minutes)
-        holidayBalance = 4 * 60;
+      if (dayOfWeek === 6) {  // Saturday
+        // Saturday holiday: +4 hours (240 minutes)
+        setWorkedMinutes(0);
+        setBalanceMinutes(240); // +4 hours
         setCalculationMessage("Feriado no sábado: +4 horas no banco de horas");
-      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {  // Monday to Friday
         // Weekday holiday: -50 minutes
-        holidayBalance = -50;
+        setWorkedMinutes(0);
+        setBalanceMinutes(-50);
         setCalculationMessage("Feriado durante a semana: -50 minutos no banco de horas");
-      } else {
+      } else {  // Sunday
         // Sunday holiday: no effect
-        holidayBalance = 0;
+        setWorkedMinutes(0);
+        setBalanceMinutes(0);
         setCalculationMessage("Feriado no domingo: sem impacto no banco de horas");
       }
-      
-      setWorkedMinutes(0);
-      setBalanceMinutes(holidayBalance);
       return;
     }
     
@@ -225,6 +222,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           </Button>
         </div>
       </CardHeader>
+      
       <CardContent className="space-y-6">
         <div className="flex items-center gap-2 bg-gray-800/40 p-3 rounded-lg">
           <Calendar className="text-gray-400" size={18} />

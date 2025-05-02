@@ -27,14 +27,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 }) => {
   const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"]; // Domingo a Sábado
 
-  // Calcula o dia da semana do primeiro dia do mês (0 = Domingo, 1 = Segunda, ...)
+  // Calculate the day of the week for the first day of the month (0 = Sunday, 1 = Monday, ...)
   const firstDayOfMonth = getDay(daysInMonth[0]);
   const emptyDays = Array(firstDayOfMonth).fill(null);
-
-  // Function to handle day selection with direct callback
-  const handleDayClick = (dateStr: string) => {
-    onSelectDate(dateStr);
-  };
 
   return (
     <div className="grid grid-cols-7 gap-1 text-center">
@@ -68,7 +63,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             isVacation={isVacation}
             isMissingEntry={isMissingEntry}
             dayOfWeek={dayOfWeek}
-            onSelectDate={handleDayClick}
+            onSelectDate={onSelectDate}
           />
         );
       })}

@@ -26,20 +26,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       const employee = employees.find(emp => emp.id === selectedEmployeeId);
       
       if (employee) {
-        // If employee is admin, accept any password for demo purposes
-        if (employee.isAdmin) {
-          setSelectedEmployee(employee);
-          toast.success(`Bem-vindo, Administrador ${employee.name}!`);
-          onLoginSuccess();
-          return;
-        }
-        
         // Check password - default is "senha" if not set
         const correctPassword = employee.password || "senha";
         
-        if (password === correctPassword) {
+        if (password === correctPassword || (employee.isAdmin && password === "admin")) {
           setSelectedEmployee(employee);
-          toast.success(`Bem-vindo, ${employee.name}!`);
+          
+          if (employee.isAdmin) {
+            toast.success(`Bem-vindo, Administrador ${employee.name}!`);
+          } else {
+            toast.success(`Bem-vindo, ${employee.name}!`);
+          }
+          
           onLoginSuccess();
         } else {
           toast.error("Senha incorreta!");
@@ -91,7 +89,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
             />
           </div>
           <p className="text-xs text-gray-400">
-            * A senha padrão é "senha" se não tiver sido alterada.
+            * A senha padrão é "senha" para usuários comuns e "admin" para administradores.
           </p>
         </div>
       </CardContent>

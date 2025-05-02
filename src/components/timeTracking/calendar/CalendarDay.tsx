@@ -65,9 +65,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   const tooltipText = `${format(day, "dd/MM/yyyy")} - ${dayLabel}`;
   
   // Create handler directly here to prevent event bubbling issues
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleClick = () => {
     onSelectDate(dateStr);
   };
   

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Employee, SystemSettings, TimeEntry, MonthlyBalance, VacationPeriod } from "../types";
 import { mockEmployees, mockTimeEntries, defaultSettings } from "../data/mockData";
@@ -112,7 +113,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     calculateMonthlyBalances();
   }, [timeEntries]);
   
-  // Função para verificar se é o último dia do mês e transferir saldo se necessário
+  // Function to check if it's the last day of the month and transfer balance if necessary
   useEffect(() => {
     const checkMonthEnd = () => {
       if (transferBalanceEnabled) {
@@ -120,11 +121,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
         
-        // Se hoje é o último dia do mês
+        // If today is the last day of the month
         if (today.getMonth() !== tomorrow.getMonth()) {
           const currentMonth = format(today, "yyyy-MM");
           
-          // Para cada funcionário, transferir saldo
+          // For each employee, transfer balance
           employees.forEach(employee => {
             transferMonthBalance(employee.id, currentMonth);
           });
@@ -134,10 +135,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
     
-    // Verificar uma vez por dia
-    const intervalId = setInterval(checkMonthEnd, 60 * 60 * 1000); // Verifica a cada hora
+    // Check once a day
+    const intervalId = setInterval(checkMonthEnd, 60 * 60 * 1000); // Check every hour
     
-    // Verificar imediatamente na inicialização
+    // Check immediately on initialization
     checkMonthEnd();
     
     return () => clearInterval(intervalId);
@@ -176,7 +177,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMonthlyBalances(newMonthlyBalances);
   };
   
-  // Get current computer date - Fixed to use the direct method
+  // Get current computer date - uses the direct method
   const getCurrentDate = () => {
     return getTodayFormatted();
   };
@@ -201,8 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return monthBalance ? monthBalance.totalBalanceMinutes : 0;
   };
   
-  // Get accumulated balance for an employee (all months)
-  // Renomeado para getAccumulatedBalance mas ainda com a mesma funcionalidade
+  // Get accumulated balance for an employee (all months) - now called "current balance"
   const getAccumulatedBalance = (employeeId: string) => {
     return monthlyBalances
       .filter(balance => balance.employeeId === employeeId)
@@ -222,31 +222,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.success("Saldo do mês zerado com sucesso!");
   };
   
-  // Transferir o saldo de um mês para o próximo
+  // Transfer balance from one month to the next
   const transferMonthBalance = (employeeId: string, fromMonth: string) => {
-    // Encontrar o saldo do mês atual
+    // Find current month balance
     const currentMonthBalance = getMonthBalanceForEmployee(employeeId, fromMonth);
     
-    if (currentMonthBalance === 0) return; // Não há saldo para transferir
+    if (currentMonthBalance === 0) return; // No balance to transfer
     
-    // Calcular o próximo mês
+    // Calculate next month
     const [year, month] = fromMonth.split('-');
-    const fromDate = new Date(parseInt(year), parseInt(month) - 1, 1); // Mês em JS começa em 0
+    const fromDate = new Date(parseInt(year), parseInt(month) - 1, 1); // Month in JS starts at 0
     const nextMonthDate = addMonths(fromDate, 1);
     const nextMonth = format(nextMonthDate, "yyyy-MM");
     
-    // Verificar se já existe um saldo para o próximo mês
+    // Check if balance for next month already exists
     const nextMonthBalanceIndex = monthlyBalances.findIndex(
       balance => balance.employeeId === employeeId && balance.month === nextMonth
     );
     
     if (nextMonthBalanceIndex >= 0) {
-      // Atualizar saldo existente do próximo mês
+      // Update existing balance for next month
       const updatedBalances = [...monthlyBalances];
       updatedBalances[nextMonthBalanceIndex].totalBalanceMinutes += currentMonthBalance;
       setMonthlyBalances(updatedBalances);
     } else {
-      // Criar novo registro de saldo para o próximo mês
+      // Create new balance record for next month
       setMonthlyBalances([
         ...monthlyBalances,
         {
@@ -257,13 +257,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
     }
     
-    // Zerar o saldo do mês atual
+    // Zero current month balance
     resetMonthBalance(employeeId, fromMonth);
     
     toast.success(`Saldo transferido para ${format(nextMonthDate, "MMMM yyyy")}`);
   };
   
-  // Ativar/desativar a opção de transferência automática de saldo
+  // Toggle automatic balance transfer option
   const toggleTransferBalanceOption = (enabled: boolean) => {
     setTransferBalanceEnabled(enabled);
     
@@ -274,7 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // Verificar se a opção de transferência de saldo está ativada
+  // Check if balance transfer option is enabled
   const isTransferBalanceEnabled = () => {
     return transferBalanceEnabled;
   };
@@ -299,7 +299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.info("Funcionário removido do sistema");
   };
   
-  // Modificando addTimeEntry para lidar corretamente com feriados
+  // Add or update a time entry
   const addTimeEntry = (entry: TimeEntry) => {
     // Check if entry for this employee and date already exists
     const existingEntryIndex = timeEntries.findIndex(
@@ -322,10 +322,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const updateTimeEntry = (entry: TimeEntry) => {
-    // Adicionar bônus de 4 horas (240 minutos) para feriados
+    // Add bonus of 4 hours (240 minutes) for Saturday holidays
     if (entry.isHoliday) {
-      entry.balanceMinutes = 240; // 4 horas em minutos
-      entry.workedMinutes = entry.balanceMinutes + (entry.workedMinutes || 0);
+      const dayOfWeek = new Date(entry.date).getDay();
+      
+      if (dayOfWeek === 6) {  // Saturday
+        entry.balanceMinutes = 240; // +4 hours
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {  // Weekdays
+        entry.balanceMinutes = -50; // -50 minutes
+      }
     }
     
     setTimeEntries((prev) =>

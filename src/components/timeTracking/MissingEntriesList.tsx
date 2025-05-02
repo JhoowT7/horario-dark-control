@@ -3,17 +3,21 @@ import React from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertCircle } from "lucide-react";
+import { Employee } from "@/types";
+import { minutesToTime } from "@/utils/timeUtils";
 
 interface MissingEntriesListProps {
   missingEntries: string[];
   formattedMonth: string;
   onSelectDate: (date: string) => void;
+  employee: Employee;
 }
 
 const MissingEntriesList: React.FC<MissingEntriesListProps> = ({ 
   missingEntries, 
   formattedMonth, 
-  onSelectDate 
+  onSelectDate,
+  employee
 }) => {
   return (
     <div>
@@ -44,7 +48,7 @@ const MissingEntriesList: React.FC<MissingEntriesListProps> = ({
                       <Badge variant="destructive" className="bg-negative/20 text-negative border-none">Pendente</Badge>
                     </div>
                     <div className="text-sm text-negative/80">
-                      Clique para registrar este dia
+                      Saldo: -{minutesToTime(employee.expectedMinutesPerDay)} (Clique para registrar este dia)
                     </div>
                   </div>
                   <AlertCircle className="text-negative h-5 w-5" />

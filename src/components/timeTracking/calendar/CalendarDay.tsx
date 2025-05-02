@@ -70,7 +70,11 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
         <TooltipTrigger asChild>
           <button
             className={dayClass}
-            onClick={() => onSelectDate(dateStr)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelectDate(dateStr);
+            }}
             type="button"
           >
             <div className="text-sm">{format(day, "d")}</div>
@@ -98,7 +102,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             
             {isMissingEntry && !entry && (
               <div className="text-xs mt-1 text-negative">
-                Pendente
+                -{minutesToTime(480)} 
               </div>
             )}
           </button>

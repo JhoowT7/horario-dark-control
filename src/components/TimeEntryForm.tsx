@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { Employee, TimeEntry } from "@/types";
@@ -25,7 +26,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     (entry) => entry.employeeId === employee.id && entry.date === date
   );
   
-  // State for form fields
+  // State for form fields - don't prefill with schedule values
   const [entry, setEntry] = useState(existingEntry?.entry || "");
   const [lunchOut, setLunchOut] = useState(existingEntry?.lunchOut || "");
   const [lunchIn, setLunchIn] = useState(existingEntry?.lunchIn || "");
@@ -157,6 +158,20 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   
   // Save time entry
   const handleSave = () => {
+    // For holiday on Saturday, special case of +4 hours
+    let calculatedBalanceMinutes = balanceMinutes;
+    
+    if (isHoliday) {
+      const dayOfWeek = getDay(new Date(date));
+      if (dayOfWeek === 6) { // Saturday
+        calculatedBalanceMinutes = 240; // +4 hours
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Weekday
+        calculatedBalanceMinutes = -50; // -50 minutes
+      } else { // Sunday
+        calculatedBalanceMinutes = 0;
+      }
+    }
+    
     const timeEntryData: TimeEntry = {
       date,
       employeeId: employee.id,
@@ -165,7 +180,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       lunchIn: formatTime(lunchIn),
       exit: formatTime(exit),
       workedMinutes,
-      balanceMinutes,
+      balanceMinutes: calculatedBalanceMinutes,
       isHoliday,
       isVacation,
       notes
@@ -175,7 +190,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     onBack();
   };
   
-  // Format date for display
+  // Format date for display - fixing date display issue
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -183,7 +198,10 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       month: 'long', 
       day: 'numeric' 
     };
-    return new Date(dateString).toLocaleDateString('pt-BR', options);
+    // Create a proper Date object from the string
+    const dateParts = dateString.split('-').map(Number);
+    const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+    return dateObj.toLocaleDateString('pt-BR', options);
   };
   
   // Copy default schedule values
@@ -193,6 +211,10 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     setLunchIn(workSchedule.lunchIn);
     setExit(workSchedule.exit);
   };
+
+  // Get day of week to check if it's a working day or weekend
+  const dayOfWeek = getDay(new Date(date));
+  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6); // Sunday or Saturday
   
   return (
     <Card className="w-full card-gradient animate-slide-up">

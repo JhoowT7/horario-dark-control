@@ -1,45 +1,19 @@
 
-import { Employee, TimeEntry, SystemSettings } from "@/types";
+// Import necessary types
 import { v4 as uuidv4 } from "uuid";
+import { Employee, TimeEntry, SystemSettings, WorkDay, ContractType, ScheduleType, VacationPeriod, UserProfile } from "../types";
 
-// Mock employees
+// Fix the contract type error by ensuring we use the correct contract types
 export const mockEmployees: Employee[] = [
   {
-    id: "admin-123",
-    name: "Admin",
-    email: "admin@empresa.com",
-    position: "Administrador",
-    expectedMinutesPerDay: 480, // 8 hours
-    isAdmin: true,
-    password: "admin",
-    scheduleType: "5x2",
-    workDays: {
-      0: false, // Sunday
-      1: true,  // Monday
-      2: true,  // Tuesday
-      3: true,  // Wednesday
-      4: true,  // Thursday
-      5: true,  // Friday
-      6: false  // Saturday
-    },
-    workSchedule: {
-      entry: "08:00",
-      lunchOut: "12:00",
-      lunchIn: "13:00",
-      exit: "17:00"
-    },
-    registrationId: "ADM001", // Registration ID
-    contractType: "CLT"
-  },
-  {
-    id: "emp-123",
+    id: "e001",
     name: "João Silva",
-    email: "joao.silva@empresa.com",
-    position: "Desenvolvedor",
-    expectedMinutesPerDay: 480, // 8 hours
-    isAdmin: false,
-    password: "senha",
-    scheduleType: "5x2",
+    email: "joao.silva@example.com",
+    phone: "(11) 98765-4321",
+    department: "Desenvolvimento",
+    position: "Desenvolvedor Full-Stack",
+    contractType: "CLT" as ContractType,
+    scheduleType: "5x2" as ScheduleType,
     workDays: {
       0: false, // Sunday
       1: true,  // Monday
@@ -49,24 +23,26 @@ export const mockEmployees: Employee[] = [
       5: true,  // Friday
       6: false  // Saturday
     },
+    expectedMinutesPerDay: 480, // 8 hours
     workSchedule: {
       entry: "08:00",
       lunchOut: "12:00",
       lunchIn: "13:00",
       exit: "17:00"
     },
-    registrationId: "DEV001", // Registration ID
-    contractType: "CLT"
+    startDate: "2023-01-15",
+    registrationId: "12345",
+    password: "senha"
   },
   {
-    id: "emp-456",
-    name: "Maria Santos",
-    email: "maria.santos@empresa.com",
-    position: "Designer",
-    expectedMinutesPerDay: 480, // 8 hours
-    isAdmin: false,
-    password: "senha",
-    scheduleType: "5x2",
+    id: "e002",
+    name: "Maria Oliveira",
+    email: "maria.oliveira@example.com",
+    phone: "(11) 91234-5678",
+    department: "Recursos Humanos",
+    position: "Gerente de RH",
+    contractType: "CLT" as ContractType,
+    scheduleType: "5x2" as ScheduleType,
     workDays: {
       0: false, // Sunday
       1: true,  // Monday
@@ -76,77 +52,143 @@ export const mockEmployees: Employee[] = [
       5: true,  // Friday
       6: false  // Saturday
     },
+    expectedMinutesPerDay: 480, // 8 hours
     workSchedule: {
       entry: "09:00",
       lunchOut: "12:30",
       lunchIn: "13:30",
       exit: "18:00"
     },
-    registrationId: "DES001", // Registration ID
-    contractType: "PJ"
+    startDate: "2022-03-10",
+    registrationId: "23456",
+    password: "senha"
+  },
+  {
+    id: "e003",
+    name: "Pedro Santos",
+    email: "pedro.santos@example.com",
+    phone: "(11) 98877-6655",
+    department: "Marketing",
+    position: "Designer Gráfico",
+    contractType: "PJ" as ContractType,
+    scheduleType: "Personalizado" as ScheduleType,
+    workDays: {
+      0: false, // Sunday
+      1: true,  // Monday
+      2: false, // Tuesday
+      3: true,  // Wednesday
+      4: false, // Thursday
+      5: true,  // Friday
+      6: false  // Saturday
+    },
+    expectedMinutesPerDay: 420, // 7 hours
+    workSchedule: {
+      entry: "10:00",
+      lunchOut: "13:00",
+      lunchIn: "14:00",
+      exit: "18:00"
+    },
+    startDate: "2023-05-22",
+    registrationId: "34567",
+    password: "senha"
   }
 ];
 
-// Generate some mock time entries for the current and previous month
-export const mockTimeEntries: TimeEntry[] = [];
-
-// Helper to get random minutes (-30 to +30)
-const getRandomMinutes = () => Math.floor(Math.random() * 60) - 30;
-
-// Generate dates - 30 days before today, up to today
-const today = new Date();
-for (let i = 30; i >= 0; i--) {
-  const date = new Date(today);
-  date.setDate(date.getDate() - i);
-  
-  // Skip weekends for 5x2 employees
-  const dayOfWeek = date.getDay();
-  if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-  
-  const dateString = date.toISOString().split('T')[0];
-  
-  // Add entries for João Silva
-  mockTimeEntries.push({
-    date: dateString,
-    employeeId: "emp-123",
+// Fix the TimeEntry type
+export const mockTimeEntries: TimeEntry[] = [
+  {
+    date: "2023-09-11",
+    employeeId: "e001",
     entry: "08:05",
     lunchOut: "12:00",
     lunchIn: "13:00",
+    exit: "17:10",
+    workedMinutes: 485,
+    balanceMinutes: 5,
+    isHoliday: false,
+    isVacation: false,
+    notes: ""
+  },
+  {
+    date: "2023-09-12",
+    employeeId: "e001",
+    entry: "08:00",
+    lunchOut: "12:00",
+    lunchIn: "13:00",
     exit: "17:00",
-    workedMinutes: 475, // 7h55min
-    balanceMinutes: -5,
+    workedMinutes: 480,
+    balanceMinutes: 0,
     isHoliday: false,
     isVacation: false,
     notes: ""
-  });
-  
-  // Add entries for Maria Santos
-  mockTimeEntries.push({
-    date: dateString,
-    employeeId: "emp-456",
-    entry: "09:00",
-    lunchOut: "12:30",
-    lunchIn: "13:30",
-    exit: "18:15",
-    workedMinutes: 495, // 8h15min
-    balanceMinutes: 15,
-    isHoliday: false,
-    isVacation: false,
-    notes: ""
-  });
-}
+  }
+];
 
 // Default system settings
 export const defaultSettings: SystemSettings = {
-  toleranceMinutes: 5,
-  maxExtraMinutes: 10,
+  companyName: "Ejemplo Tecnologia",
+  companyLogo: "",
+  toleranceMinutes: 10,
+  maxExtraMinutes: 20,
   holidays: [
-    "2025-01-01", // New Year's Day
-    "2025-04-18", // Good Friday
-    "2025-04-21", // Easter Monday
-    "2025-05-01", // Labor Day
-    "2025-12-25", // Christmas
-    "2025-12-31"  // New Year's Eve
+    "2023-01-01", // Ano Novo
+    "2023-04-07", // Sexta-feira Santa
+    "2023-04-21", // Tiradentes
+    "2023-05-01", // Dia do Trabalho
+    "2023-09-07", // Independência do Brasil
+    "2023-10-12", // Nossa Senhora Aparecida
+    "2023-11-02", // Finados
+    "2023-11-15", // Proclamação da República
+    "2023-12-25"  // Natal
   ],
-  vacationPeriods: []
+  vacationPeriods: [
+    {
+      employeeId: "e001",
+      startDate: "2023-07-10",
+      endDate: "2023-07-21"
+    }
+  ]
 };
+
+// Add user profiles data with admin user
+export const mockUsers: UserProfile[] = [
+  {
+    id: "admin",
+    name: "Administrator",
+    username: "admin",
+    email: "admin@example.com",
+    password: "admin",
+    role: "admin",
+    lastLogin: "2023-09-01T10:00:00Z"
+  },
+  {
+    id: "e001",
+    name: "João Silva",
+    username: "joao.silva",
+    email: "joao.silva@example.com",
+    password: "senha",
+    role: "user",
+    employeeId: "e001", 
+    lastLogin: "2023-09-10T14:30:00Z"
+  },
+  {
+    id: "e002",
+    name: "Maria Oliveira",
+    username: "maria.oliveira",
+    email: "maria.oliveira@example.com",
+    password: "senha",
+    role: "user",
+    employeeId: "e002",
+    lastLogin: "2023-09-09T11:15:00Z"
+  },
+  {
+    id: "e003",
+    name: "Pedro Santos",
+    username: "pedro.santos",
+    email: "pedro.santos@example.com",
+    password: "senha",
+    role: "user",
+    employeeId: "e003",
+    lastLogin: "2023-09-08T09:45:00Z"
+  }
+];

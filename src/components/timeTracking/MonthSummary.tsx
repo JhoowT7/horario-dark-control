@@ -60,6 +60,7 @@ const MonthSummary: React.FC<MonthSummaryProps> = ({
     setShowResetDialog(false);
   };
 
+  // Update transfer option with immediate update to UI
   const handleTransferOptionChange = (checked: boolean) => {
     setTransferEnabled(checked);
     toggleTransferBalanceOption(checked);

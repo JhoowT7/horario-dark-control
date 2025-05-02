@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Employee, SystemSettings, TimeEntry, MonthlyBalance, VacationPeriod } from "../types";
 import { mockEmployees, mockTimeEntries, defaultSettings } from "../data/mockData";

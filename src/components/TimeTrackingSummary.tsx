@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Employee, TimeEntry } from "@/types";
 import { useAppContext } from "@/contexts/AppContext";
@@ -73,7 +74,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     const prevMonthBalance = getMonthBalanceForEmployee(employee.id, prevMonthString);
     setPreviousMonthBalance(prevMonthBalance);
     
-    // Total accumulated balance (agora chamado de saldo atual)
+    // Total accumulated balance (now called saldo atual)
     const accumulatedBalanceMinutes = getAccumulatedBalance(employee.id);
     setAccumulatedBalance(accumulatedBalanceMinutes);
     
@@ -145,19 +146,21 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     
   }, [currentMonth, employeeEntries, employee.id, getMonthBalanceForEmployee, getAccumulatedBalance]);
   
-  // Navigate to previous month
+  // Navigate to previous month - fixing the double-click issue
   const goToPreviousMonth = () => {
-    setCurrentMonth((prev) => subMonths(prev, 1));
+    const prevMonth = subMonths(currentMonth, 1);
+    setCurrentMonth(prevMonth);
   };
   
   // Navigate to next month
   const goToNextMonth = () => {
-    setCurrentMonth((prev) => addMonths(prev, 1));
+    const nextMonth = addMonths(currentMonth, 1);
+    setCurrentMonth(nextMonth);
   };
   
   // Go to current month
   const goToCurrentMonth = () => {
-    setCurrentMonth(today);
+    setCurrentMonth(new Date(today));
   };
   
   // Format the month title
@@ -171,7 +174,8 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   
   // Find entry for a specific date
   const getEntryForDate = (date: Date) => {
-    return employeeEntries.find((entry) => entry.date === formatDateString(date));
+    const formattedDate = formatDateString(date);
+    return employeeEntries.find((entry) => entry.date === formattedDate);
   };
   
   // Check if a date is a holiday
@@ -190,10 +194,8 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     );
   };
 
-  // Modify the handleSelectDate function to ensure a direct and immediate response
+  // Fixed to ensure direct and immediate response when clicking on a day
   const handleSelectDate = (date: string) => {
-    console.log("Date selected:", date);
-    // Directly call onSelectDate without any additional conditions
     onSelectDate(date);
   };
   

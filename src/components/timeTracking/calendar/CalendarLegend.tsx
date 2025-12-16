@@ -21,6 +21,10 @@ const CalendarLegend: React.FC = () => {
         <span className="text-gray-400">Férias</span>
       </div>
       <div className="flex items-center">
+        <div className="w-3 h-3 rounded-full bg-orange-500/10 mr-1"></div>
+        <span className="text-gray-400">Atestado</span>
+      </div>
+      <div className="flex items-center">
         <div className="w-3 h-3 rounded-full bg-negative/5 border border-negative/20 mr-1"></div>
         <span className="text-gray-400">Pendente</span>
       </div>

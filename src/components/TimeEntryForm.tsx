@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock, Palmtree } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock, Palmtree, FileText, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance, generateBalanceMessage } from "@/utils/timeUtils";
 import { parseISO, format, differenceInCalendarDays, getDay } from "date-fns";
@@ -33,6 +33,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   const [exit, setExit] = useState(existingEntry?.exit || "");
   const [isHoliday, setIsHoliday] = useState(existingEntry?.isHoliday || settings.holidays.includes(date));
   const [isVacation, setIsVacation] = useState(existingEntry?.isVacation || isDateInVacation(employee.id, date));
+  const [isAtestado, setIsAtestado] = useState(existingEntry?.isAtestado || false);
   const [notes, setNotes] = useState(existingEntry?.notes || "");
   
   // Default time values from employee schedule (for easy copy)
@@ -61,6 +62,14 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       setWorkedMinutes(0);
       setBalanceMinutes(0);
       setCalculationMessage("Férias: dia não contabilizado no banco de horas");
+      return;
+    }
+    
+    if (isAtestado) {
+      // Atestado days are neutral - no balance impact
+      setWorkedMinutes(0);
+      setBalanceMinutes(0);
+      setCalculationMessage("Atestado médico: dia não contabilizado no banco de horas");
       return;
     }
     
@@ -129,7 +138,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     } else {
       setCalculationMessage("Cálculo realizado normalmente");
     }
-  }, [entry, lunchOut, lunchIn, exit, isHoliday, isVacation, employee, date, settings]);
+  }, [entry, lunchOut, lunchIn, exit, isHoliday, isVacation, isAtestado, employee, date, settings]);
   
   // Fill current time for today's entry
   const fillCurrentTime = (field: 'entry' | 'lunchOut' | 'lunchIn' | 'exit') => {
@@ -183,6 +192,7 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       balanceMinutes: calculatedBalanceMinutes,
       isHoliday,
       isVacation,
+      isAtestado,
       notes
     };
     
@@ -261,33 +271,51 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           </Button>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center space-x-0 sm:space-x-4 space-y-2 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap">
           <div className="flex items-center space-x-2">
             <Switch 
               id="holiday" 
               checked={isHoliday} 
-              onCheckedChange={setIsHoliday} 
+              onCheckedChange={(checked) => {
+                setIsHoliday(checked);
+                if (checked) { setIsVacation(false); setIsAtestado(false); }
+              }} 
             />
-            <Label htmlFor="holiday">Marcar como Feriado</Label>
+            <Label htmlFor="holiday">Feriado</Label>
           </div>
           
           <div className="flex items-center space-x-2">
             <Switch 
               id="vacation" 
               checked={isVacation} 
-              onCheckedChange={setIsVacation} 
+              onCheckedChange={(checked) => {
+                setIsVacation(checked);
+                if (checked) { setIsHoliday(false); setIsAtestado(false); }
+              }} 
             />
-            <Label htmlFor="vacation">Marcar como Férias</Label>
+            <Label htmlFor="vacation">Férias</Label>
           </div>
           
-          {(isHoliday || isVacation) && (
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="atestado" 
+              checked={isAtestado} 
+              onCheckedChange={(checked) => {
+                setIsAtestado(checked);
+                if (checked) { setIsHoliday(false); setIsVacation(false); }
+              }} 
+            />
+            <Label htmlFor="atestado">Atestado</Label>
+          </div>
+          
+          {(isHoliday || isVacation || isAtestado) && (
             <Badge variant="outline" className="ml-auto bg-gray-800 text-gray-400">
-              {isVacation ? "Férias" : "Feriado"}
+              {isVacation ? "Férias" : isAtestado ? "Atestado" : "Feriado"}
             </Badge>
           )}
         </div>
         
-        {!isHoliday && !isVacation && (
+        {!isHoliday && !isVacation && !isAtestado && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="entry" className="flex items-center justify-between">

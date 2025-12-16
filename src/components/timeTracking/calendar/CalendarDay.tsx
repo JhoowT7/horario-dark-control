@@ -11,6 +11,7 @@ interface CalendarDayProps {
   isWorkDay: boolean;
   isHoliday: boolean;
   isVacation: boolean;
+  isAtestado?: boolean;
   isMissingEntry: boolean;
   dayOfWeek: number;
   onSelectDate: (date: string) => void;
@@ -30,6 +31,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   isWorkDay,
   isHoliday,
   isVacation,
+  isAtestado = false,
   isMissingEntry,
   dayOfWeek,
   onSelectDate
@@ -43,9 +45,11 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     dayClass += " hover:bg-gray-800";
   }
   
-  if (isVacation) {
+  if (isVacation || entry?.isVacation) {
     dayClass += " bg-cyanBlue/10";
-  } else if (isHoliday) {
+  } else if (isAtestado || entry?.isAtestado) {
+    dayClass += " bg-orange-500/10";
+  } else if (isHoliday || entry?.isHoliday) {
     dayClass += " bg-gray-800/50";
   } else if (entry) {
     if (entry.balanceMinutes > 0) {
@@ -91,15 +95,21 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
               </div>
             )}
             
-            {isHoliday && (
+            {(isHoliday || entry?.isHoliday) && !isVacation && !entry?.isVacation && !isAtestado && !entry?.isAtestado && (
               <div className="text-xs mt-1 text-gray-400">
                 Feriado
               </div>
             )}
             
-            {isVacation && (
+            {(isVacation || entry?.isVacation) && (
               <div className="text-xs mt-1 text-cyanBlue/80">
                 Férias
+              </div>
+            )}
+            
+            {(isAtestado || entry?.isAtestado) && (
+              <div className="text-xs mt-1 text-orange-400">
+                Atestado
               </div>
             )}
             

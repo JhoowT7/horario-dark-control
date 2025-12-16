@@ -20,6 +20,7 @@ import CalendarView from "./timeTracking/CalendarView";
 import EntriesList from "./timeTracking/EntriesList";
 import MissingEntriesList from "./timeTracking/MissingEntriesList";
 import MonthSummary from "./timeTracking/MonthSummary";
+import DocumentRequests from "./DocumentRequests";
 import { formatDateString, isWorkingDay } from "./timeTracking/DateUtils";
 
 interface TimeTrackingSummaryProps {
@@ -246,8 +247,9 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
           <Tabs defaultValue="month">
             <TabsList className="mb-4">
               <TabsTrigger value="month">Visão Mensal</TabsTrigger>
-              <TabsTrigger value="list">Lista de Registros</TabsTrigger>
+              <TabsTrigger value="list">Registros</TabsTrigger>
               <TabsTrigger value="missing">Pendentes</TabsTrigger>
+              <TabsTrigger value="requests">Requisições</TabsTrigger>
             </TabsList>
             
             <TabsContent value="month">
@@ -282,6 +284,10 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                 onSelectDate={onSelectDate}
                 employee={employee}
               />
+            </TabsContent>
+            
+            <TabsContent value="requests">
+              <DocumentRequests employee={employee} />
             </TabsContent>
           </Tabs>
         </CardContent>

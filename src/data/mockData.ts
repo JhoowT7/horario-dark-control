@@ -139,6 +139,7 @@ export const mockTimeEntries: TimeEntry[] = [
     balanceMinutes: 5,
     isHoliday: false,
     isVacation: false,
+    isAtestado: false,
     notes: ""
   },
   {
@@ -152,6 +153,7 @@ export const mockTimeEntries: TimeEntry[] = [
     balanceMinutes: 0,
     isHoliday: false,
     isVacation: false,
+    isAtestado: false,
     notes: ""
   }
 ];

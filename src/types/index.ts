@@ -44,7 +44,31 @@ export interface TimeEntry {
   balanceMinutes: number;
   isHoliday: boolean;
   isVacation: boolean;
+  isAtestado: boolean;
   notes: string;
+}
+
+// Document request type
+export interface DocumentRequest {
+  id: string;
+  employeeId: string;
+  type: "atestado" | "documento" | "outro";
+  title: string;
+  description: string;
+  date: string;
+  createdAt: string;
+  status: "pendente" | "aprovado" | "rejeitado";
+  files: DocumentFile[];
+}
+
+// Document file type
+export interface DocumentFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string; // base64
+  uploadedAt: string;
 }
 
 // Monthly balance record

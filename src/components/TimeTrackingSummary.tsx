@@ -265,6 +265,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
                 isVacationDate={isVacationDate}
                 missingEntries={missingEntries}
                 formatDateString={formatDateString}
+                expectedMinutesPerDay={employee.expectedMinutesPerDay}
                 onSelectDate={handleSelectDate}
               />
             </TabsContent>

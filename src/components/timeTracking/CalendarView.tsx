@@ -20,6 +20,7 @@ interface CalendarViewProps {
   isVacationDate: (date: Date) => boolean;
   missingEntries: string[];
   formatDateString: (date: Date) => string;
+  expectedMinutesPerDay: number;
   onSelectDate: (date: string) => void;
 }
 
@@ -35,6 +36,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   isVacationDate,
   missingEntries,
   formatDateString,
+  expectedMinutesPerDay,
   onSelectDate
 }) => {
   const formattedMonth = format(currentMonth, "MMMM yyyy", { locale: ptBR });
@@ -62,6 +64,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           isVacationDate={isVacationDate}
           missingEntries={missingEntries}
           formatDateString={formatDateString}
+          expectedMinutesPerDay={expectedMinutesPerDay}
           onSelectDate={handleSelectDate}
         />
       </TooltipProvider>

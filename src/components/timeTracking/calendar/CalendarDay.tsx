@@ -14,6 +14,7 @@ interface CalendarDayProps {
   isAtestado?: boolean;
   isMissingEntry: boolean;
   dayOfWeek: number;
+  expectedMinutesPerDay: number;
   onSelectDate: (date: string) => void;
 }
 
@@ -34,6 +35,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   isAtestado = false,
   isMissingEntry,
   dayOfWeek,
+  expectedMinutesPerDay,
   onSelectDate
 }) => {
   // Determine day styling
@@ -115,7 +117,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             
             {isMissingEntry && !entry && (
               <div className="text-xs mt-1 text-negative">
-                -{minutesToTime(480)} 
+                -{minutesToTime(expectedMinutesPerDay)} 
               </div>
             )}
           </button>

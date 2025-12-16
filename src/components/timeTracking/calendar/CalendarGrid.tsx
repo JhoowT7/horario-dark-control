@@ -12,6 +12,7 @@ interface CalendarGridProps {
   isVacationDate: (date: Date) => boolean;
   missingEntries: string[];
   formatDateString: (date: Date) => string;
+  expectedMinutesPerDay: number;
   onSelectDate: (date: string) => void;
 }
 
@@ -23,6 +24,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   isVacationDate,
   missingEntries,
   formatDateString,
+  expectedMinutesPerDay,
   onSelectDate,
 }) => {
   const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"]; // Domingo a Sábado
@@ -63,6 +65,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             isVacation={isVacation}
             isMissingEntry={isMissingEntry}
             dayOfWeek={dayOfWeek}
+            expectedMinutesPerDay={expectedMinutesPerDay}
             onSelectDate={onSelectDate}
           />
         );

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { Employee, TimeEntry, WorkBreak } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowUp, ArrowDown, Calendar, Copy, Save, X, Clock, CalendarClock, Plus, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, Copy, Save, X, Clock, CalendarClock, Plus, Trash2, HelpCircle, AlertCircle, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance } from "@/utils/timeUtils";
 import { parseISO, differenceInCalendarDays, getDay } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface TimeEntryFormProps {
   employee: Employee;
@@ -45,28 +47,131 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   const [workedMinutes, setWorkedMinutes] = useState(existingEntry?.workedMinutes || 0);
   const [balanceMinutes, setBalanceMinutes] = useState(existingEntry?.balanceMinutes || 0);
   const [calculationMessage, setCalculationMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const isToday = date === getCurrentDate();
   const daysFromToday = differenceInCalendarDays(parseISO(date), parseISO(getCurrentDate()));
   
   const handleTimeBlur = (value: string, setter: (value: string) => void) => {
     setter(formatTime(value));
+    setHasUnsavedChanges(true);
   };
+  
+  // Validation function for break times
+  const validateBreakTimes = useCallback((breakItem: WorkBreak): string | null => {
+    if (!breakItem.exitTime || !breakItem.returnTime) return null;
+    
+    const exitMinutes = timeToMinutes(breakItem.exitTime);
+    const returnMinutes = timeToMinutes(breakItem.returnTime);
+    
+    if (returnMinutes <= exitMinutes) {
+      return "Retorno deve ser após a saída";
+    }
+    
+    // Check if break is within work hours
+    const entryMinutes = timeToMinutes(entry);
+    const exitWorkMinutes = timeToMinutes(exit);
+    
+    if (entry && exitMinutes < entryMinutes) {
+      return "Intervalo fora do horário de trabalho";
+    }
+    
+    if (exit && returnMinutes > exitWorkMinutes) {
+      return "Intervalo fora do horário de trabalho";
+    }
+    
+    return null;
+  }, [entry, exit]);
+  
+  // Check for overlapping breaks
+  const checkOverlappingBreaks = useCallback((): string | null => {
+    for (let i = 0; i < breaks.length; i++) {
+      for (let j = i + 1; j < breaks.length; j++) {
+        const b1 = breaks[i];
+        const b2 = breaks[j];
+        
+        if (!b1.exitTime || !b1.returnTime || !b2.exitTime || !b2.returnTime) continue;
+        
+        const b1Exit = timeToMinutes(b1.exitTime);
+        const b1Return = timeToMinutes(b1.returnTime);
+        const b2Exit = timeToMinutes(b2.exitTime);
+        const b2Return = timeToMinutes(b2.returnTime);
+        
+        // Check overlap
+        if ((b2Exit >= b1Exit && b2Exit < b1Return) || (b1Exit >= b2Exit && b1Exit < b2Return)) {
+          return `Intervalos ${i + 1} e ${j + 1} estão sobrepostos`;
+        }
+      }
+    }
+    return null;
+  }, [breaks]);
+  
+  // Validate all breaks and update errors
+  useEffect(() => {
+    const errors: Record<string, string> = {};
+    
+    breaks.forEach((breakItem, index) => {
+      const error = validateBreakTimes(breakItem);
+      if (error) {
+        errors[`break_${breakItem.id}`] = error;
+      }
+    });
+    
+    const overlapError = checkOverlappingBreaks();
+    if (overlapError) {
+      errors['overlap'] = overlapError;
+    }
+    
+    setValidationErrors(errors);
+  }, [breaks, validateBreakTimes, checkOverlappingBreaks]);
   
   // Add new break
   const addBreak = () => {
     setBreaks([...breaks, { id: uuidv4(), exitTime: "", returnTime: "", reason: "" }]);
+    setHasUnsavedChanges(true);
   };
   
   // Remove break
   const removeBreak = (id: string) => {
     setBreaks(breaks.filter(b => b.id !== id));
+    setHasUnsavedChanges(true);
   };
   
   // Update break field
   const updateBreak = (id: string, field: keyof WorkBreak, value: string) => {
     setBreaks(breaks.map(b => b.id === id ? { ...b, [field]: value } : b));
+    setHasUnsavedChanges(true);
   };
+  
+  // Autosave functionality
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+    
+    autosaveTimerRef.current = setTimeout(() => {
+      // Store in localStorage as backup
+      const backupData = {
+        date,
+        employeeId: employee.id,
+        entry, lunchOut, lunchIn, exit,
+        breaks, isHoliday, isVacation, isAtestado, notes,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(`timeentry_backup_${employee.id}_${date}`, JSON.stringify(backupData));
+    }, 2000);
+    
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [entry, lunchOut, lunchIn, exit, breaks, isHoliday, isVacation, isAtestado, notes, hasUnsavedChanges, date, employee.id]);
   
   // Calculate worked hours when inputs change
   useEffect(() => {
@@ -180,7 +285,17 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     updateBreak(breakId, field, currentTime);
   };
   
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Check for validation errors
+    if (Object.keys(validationErrors).length > 0) {
+      toast.error("Corrija os erros antes de salvar", {
+        description: Object.values(validationErrors)[0]
+      });
+      return;
+    }
+    
+    setIsSaving(true);
+    
     let calculatedBalanceMinutes = balanceMinutes;
     
     if (isHoliday) {
@@ -214,7 +329,20 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       notes
     };
     
+    // Small delay for animation
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     addTimeEntry(timeEntryData);
+    
+    // Clear backup after successful save
+    localStorage.removeItem(`timeentry_backup_${employee.id}_${date}`);
+    setHasUnsavedChanges(false);
+    
+    toast.success("Registro salvo", {
+      description: `${formatDate(date)} - ${employee.name}`
+    });
+    
+    setIsSaving(false);
     onBack();
   };
   
@@ -427,77 +555,94 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
                 </p>
               )}
               
-              {breaks.map((breakItem, index) => (
-                <div key={breakItem.id} className="bg-gray-800/30 rounded-lg p-3 space-y-3 border border-gray-700/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-300">
-                      Intervalo {index + 1}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeBreak(breakItem.id)}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-900/20 h-7 px-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs flex items-center justify-between">
-                        <span>Saída</span>
-                        {isToday && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => fillBreakCurrentTime(breakItem.id, 'exitTime')} 
-                            className="h-5 px-1 text-xs"
-                          >
-                            <Clock className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </Label>
-                      <Input
-                        value={breakItem.exitTime}
-                        onChange={(e) => updateBreak(breakItem.id, 'exitTime', e.target.value)}
-                        onBlur={(e) => updateBreak(breakItem.id, 'exitTime', formatTime(e.target.value))}
-                        placeholder="10:00"
-                        className="input-time h-8 text-sm"
-                      />
+              {breaks.map((breakItem, index) => {
+                const breakError = validationErrors[`break_${breakItem.id}`];
+                const hasError = !!breakError;
+                
+                return (
+                  <div 
+                    key={breakItem.id} 
+                    className={`bg-gray-800/30 rounded-lg p-3 space-y-3 border transition-colors animate-fade-in ${
+                      hasError ? 'border-negative/50 bg-negative/5' : 'border-gray-700/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-300">
+                        Intervalo {index + 1}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeBreak(breakItem.id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-900/20 h-7 px-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs flex items-center justify-between">
-                        <span>Retorno</span>
-                        {isToday && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => fillBreakCurrentTime(breakItem.id, 'returnTime')} 
-                            className="h-5 px-1 text-xs"
-                          >
-                            <Clock className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </Label>
-                      <Input
-                        value={breakItem.returnTime}
-                        onChange={(e) => updateBreak(breakItem.id, 'returnTime', e.target.value)}
-                        onBlur={(e) => updateBreak(breakItem.id, 'returnTime', formatTime(e.target.value))}
-                        placeholder="10:30"
-                        className="input-time h-8 text-sm"
-                      />
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center justify-between">
+                          <span>Saída</span>
+                          {isToday && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => fillBreakCurrentTime(breakItem.id, 'exitTime')} 
+                              className="h-5 px-1 text-xs"
+                            >
+                              <Clock className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </Label>
+                        <Input
+                          value={breakItem.exitTime}
+                          onChange={(e) => updateBreak(breakItem.id, 'exitTime', e.target.value)}
+                          onBlur={(e) => updateBreak(breakItem.id, 'exitTime', formatTime(e.target.value))}
+                          placeholder="10:00"
+                          className={`input-time h-8 text-sm ${hasError ? 'border-negative/50 focus:ring-negative' : ''}`}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center justify-between">
+                          <span>Retorno</span>
+                          {isToday && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => fillBreakCurrentTime(breakItem.id, 'returnTime')} 
+                              className="h-5 px-1 text-xs"
+                            >
+                              <Clock className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </Label>
+                        <Input
+                          value={breakItem.returnTime}
+                          onChange={(e) => updateBreak(breakItem.id, 'returnTime', e.target.value)}
+                          onBlur={(e) => updateBreak(breakItem.id, 'returnTime', formatTime(e.target.value))}
+                          placeholder="10:30"
+                          className={`input-time h-8 text-sm ${hasError ? 'border-negative/50 focus:ring-negative' : ''}`}
+                        />
+                      </div>
                     </div>
+                    
+                    {hasError && (
+                      <div className="flex items-center gap-1.5 text-xs text-negative">
+                        <AlertCircle className="h-3 w-3" />
+                        {breakError}
+                      </div>
+                    )}
+                    
+                    <Input
+                      value={breakItem.reason || ""}
+                      onChange={(e) => updateBreak(breakItem.id, 'reason', e.target.value)}
+                      placeholder="Motivo (opcional): banco, médico, etc."
+                      className="bg-gray-800/50 border-gray-700 h-8 text-sm"
+                    />
                   </div>
-                  
-                  <Input
-                    value={breakItem.reason || ""}
-                    onChange={(e) => updateBreak(breakItem.id, 'reason', e.target.value)}
-                    placeholder="Motivo (opcional): banco, médico, etc."
-                    className="bg-gray-800/50 border-gray-700 h-8 text-sm"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
@@ -514,15 +659,42 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
         </div>
         
         <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Horas trabalhadas:</span>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">Horas trabalhadas:</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-gray-500 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">Total de horas no expediente, descontando almoço e intervalos adicionais.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <span>{minutesToTime(workedMinutes)}</span>
           </div>
           
-          <div className="flex justify-between">
-            <span className="text-gray-400">Saldo do dia:</span>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">Saldo do dia:</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-gray-500 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm mb-1"><strong>Positivo (+):</strong> Horas extras trabalhadas além da jornada.</p>
+                    <p className="text-sm"><strong>Negativo (-):</strong> Horas que faltam para completar a jornada.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             {balanceMinutes === 0 ? (
-              <span>00:00</span>
+              <span className="flex items-center text-cyanBlue/70">
+                <Check className="h-4 w-4 mr-1" /> Jornada completa
+              </span>
             ) : balanceMinutes > 0 ? (
               <span className="balance-positive flex items-center">
                 <ArrowUp className="h-4 w-4 mr-1" /> {minutesToTime(balanceMinutes)}
@@ -537,7 +709,29 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           <div className="text-xs text-gray-400">
             {calculationMessage}
           </div>
+          
+          {hasUnsavedChanges && (
+            <div className="text-xs text-cyanBlue/60 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-cyanBlue/60 rounded-full animate-pulse-slow"></span>
+              Backup automático ativo
+            </div>
+          )}
         </div>
+        
+        {/* Validation errors summary */}
+        {Object.keys(validationErrors).length > 0 && (
+          <div className="bg-negative/10 border border-negative/30 rounded-lg p-3 animate-shake">
+            <div className="flex items-center gap-2 text-negative text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>Corrija os erros antes de salvar:</span>
+            </div>
+            <ul className="mt-2 space-y-1 text-xs text-negative/80 pl-6 list-disc">
+              {Object.values(validationErrors).map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between">
         <div className="flex gap-2">
@@ -565,8 +759,20 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           )}
         </div>
         
-        <Button onClick={handleSave} className="bg-cyanBlue hover:bg-cyanBlue/90 text-black">
-          <Save className="h-4 w-4 mr-2" /> Salvar
+        <Button 
+          onClick={handleSave} 
+          disabled={isSaving || Object.keys(validationErrors).length > 0}
+          className={`bg-cyanBlue hover:bg-cyanBlue/90 text-black transition-all ${isSaving ? 'animate-save-success' : ''}`}
+        >
+          {isSaving ? (
+            <>
+              <Check className="h-4 w-4 mr-2 animate-fade-in" /> Salvando...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" /> Salvar
+            </>
+          )}
         </Button>
       </CardFooter>
     </Card>

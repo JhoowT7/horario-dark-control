@@ -32,6 +32,14 @@ export interface Employee {
   isAdmin?: boolean; // Add isAdmin property
 }
 
+// Break/interval during work day
+export interface WorkBreak {
+  id: string;
+  exitTime: string;
+  returnTime: string;
+  reason?: string;
+}
+
 // Time entry for daily time tracking
 export interface TimeEntry {
   date: string;
@@ -40,6 +48,7 @@ export interface TimeEntry {
   lunchOut: string;
   lunchIn: string;
   exit: string;
+  breaks?: WorkBreak[]; // Additional breaks/exits during the day
   workedMinutes: number;
   balanceMinutes: number;
   isHoliday: boolean;

@@ -1,16 +1,17 @@
 
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
-import { Employee, TimeEntry } from "@/types";
+import { Employee, TimeEntry, WorkBreak } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowUp, ArrowDown, Calendar, Check, Copy, Save, X, Clock, CalendarClock, Palmtree, FileText, Upload } from "lucide-react";
+import { ArrowUp, ArrowDown, Calendar, Copy, Save, X, Clock, CalendarClock, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance, generateBalanceMessage } from "@/utils/timeUtils";
-import { parseISO, format, differenceInCalendarDays, getDay } from "date-fns";
+import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance } from "@/utils/timeUtils";
+import { parseISO, differenceInCalendarDays, getDay } from "date-fns";
+import { v4 as uuidv4 } from "uuid";
 
 interface TimeEntryFormProps {
   employee: Employee;
@@ -26,39 +27,50 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     (entry) => entry.employeeId === employee.id && entry.date === date
   );
   
-  // State for form fields - don't prefill with schedule values
+  // State for form fields
   const [entry, setEntry] = useState(existingEntry?.entry || "");
   const [lunchOut, setLunchOut] = useState(existingEntry?.lunchOut || "");
   const [lunchIn, setLunchIn] = useState(existingEntry?.lunchIn || "");
   const [exit, setExit] = useState(existingEntry?.exit || "");
+  const [breaks, setBreaks] = useState<WorkBreak[]>(existingEntry?.breaks || []);
   const [isHoliday, setIsHoliday] = useState(existingEntry?.isHoliday || settings.holidays.includes(date));
   const [isVacation, setIsVacation] = useState(existingEntry?.isVacation || isDateInVacation(employee.id, date));
   const [isAtestado, setIsAtestado] = useState(existingEntry?.isAtestado || false);
   const [notes, setNotes] = useState(existingEntry?.notes || "");
   
-  // Default time values from employee schedule (for easy copy)
+  // Default time values from employee schedule
   const { workSchedule } = employee;
   
-  // Calculate work hours and balance based on current inputs
+  // Calculate work hours and balance
   const [workedMinutes, setWorkedMinutes] = useState(existingEntry?.workedMinutes || 0);
   const [balanceMinutes, setBalanceMinutes] = useState(existingEntry?.balanceMinutes || 0);
   const [calculationMessage, setCalculationMessage] = useState("");
   
-  // Check if the date is today
   const isToday = date === getCurrentDate();
-  
-  // Calculate how many days in the past or future
   const daysFromToday = differenceInCalendarDays(parseISO(date), parseISO(getCurrentDate()));
   
-  // Format input when it loses focus
   const handleTimeBlur = (value: string, setter: (value: string) => void) => {
     setter(formatTime(value));
+  };
+  
+  // Add new break
+  const addBreak = () => {
+    setBreaks([...breaks, { id: uuidv4(), exitTime: "", returnTime: "", reason: "" }]);
+  };
+  
+  // Remove break
+  const removeBreak = (id: string) => {
+    setBreaks(breaks.filter(b => b.id !== id));
+  };
+  
+  // Update break field
+  const updateBreak = (id: string, field: keyof WorkBreak, value: string) => {
+    setBreaks(breaks.map(b => b.id === id ? { ...b, [field]: value } : b));
   };
   
   // Calculate worked hours when inputs change
   useEffect(() => {
     if (isVacation) {
-      // Vacation days are neutral - no balance impact
       setWorkedMinutes(0);
       setBalanceMinutes(0);
       setCalculationMessage("Férias: dia não contabilizado no banco de horas");
@@ -66,7 +78,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     }
     
     if (isAtestado) {
-      // Atestado days are neutral - no balance impact
       setWorkedMinutes(0);
       setBalanceMinutes(0);
       setCalculationMessage("Atestado médico: dia não contabilizado no banco de horas");
@@ -74,21 +85,17 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     }
     
     if (isHoliday) {
-      // Get day of week (0 = Sunday, 6 = Saturday)
       const dayOfWeek = getDay(new Date(date));
       
-      if (dayOfWeek === 6) {  // Saturday
-        // Saturday holiday: +4 hours (240 minutes)
+      if (dayOfWeek === 6) {
         setWorkedMinutes(0);
-        setBalanceMinutes(240); // +4 hours
+        setBalanceMinutes(240);
         setCalculationMessage("Feriado no sábado: +4 horas no banco de horas");
-      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {  // Monday to Friday
-        // Weekday holiday: -50 minutes
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
         setWorkedMinutes(0);
         setBalanceMinutes(-50);
         setCalculationMessage("Feriado durante a semana: -50 minutos no banco de horas");
-      } else {  // Sunday
-        // Sunday holiday: no effect
+      } else {
         setWorkedMinutes(0);
         setBalanceMinutes(0);
         setCalculationMessage("Feriado no domingo: sem impacto no banco de horas");
@@ -96,19 +103,23 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       return;
     }
     
-    // Regular day calculation
+    // Convert breaks to format expected by calculateWorkHours
+    const breakIntervals = breaks
+      .filter(b => b.exitTime && b.returnTime)
+      .map(b => ({ exitTime: b.exitTime, returnTime: b.returnTime }));
+    
     const result = calculateWorkHours(
       entry,
       lunchOut,
       lunchIn,
       exit,
-      settings.toleranceMinutes
+      settings.toleranceMinutes,
+      breakIntervals
     );
     
     setWorkedMinutes(result.workMinutes);
     
     if (result.workMinutes === 0 && result.message === "Ausência registrada") {
-      // Missing entries = absent
       setBalanceMinutes(-employee.expectedMinutesPerDay);
       setCalculationMessage("Ausência registrada: -" + minutesToTime(employee.expectedMinutesPerDay));
       return;
@@ -119,7 +130,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       return;
     }
     
-    // Calculate balance
     const balanceResult = calculateDayBalance(
       result.workMinutes,
       employee.expectedMinutesPerDay,
@@ -136,13 +146,15 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
         setCalculationMessage(`Extra dentro do limite (${settings.maxExtraMinutes} min): sem adicional`);
       }
     } else {
-      setCalculationMessage("Cálculo realizado normalmente");
+      const breakCount = breakIntervals.length;
+      setCalculationMessage(breakCount > 0 
+        ? `Cálculo com ${breakCount} intervalo(s) adicional(is)` 
+        : "Cálculo realizado normalmente");
     }
-  }, [entry, lunchOut, lunchIn, exit, isHoliday, isVacation, isAtestado, employee, date, settings]);
+  }, [entry, lunchOut, lunchIn, exit, breaks, isHoliday, isVacation, isAtestado, employee, date, settings]);
   
-  // Fill current time for today's entry
   const fillCurrentTime = (field: 'entry' | 'lunchOut' | 'lunchIn' | 'exit') => {
-    if (!isToday) return; // Only works for today
+    if (!isToday) return;
     
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
@@ -150,33 +162,34 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     const currentTime = `${hours}:${minutes}`;
     
     switch (field) {
-      case 'entry':
-        setEntry(currentTime);
-        break;
-      case 'lunchOut':
-        setLunchOut(currentTime);
-        break;
-      case 'lunchIn':
-        setLunchIn(currentTime);
-        break;
-      case 'exit':
-        setExit(currentTime);
-        break;
+      case 'entry': setEntry(currentTime); break;
+      case 'lunchOut': setLunchOut(currentTime); break;
+      case 'lunchIn': setLunchIn(currentTime); break;
+      case 'exit': setExit(currentTime); break;
     }
   };
   
-  // Save time entry
+  const fillBreakCurrentTime = (breakId: string, field: 'exitTime' | 'returnTime') => {
+    if (!isToday) return;
+    
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    
+    updateBreak(breakId, field, currentTime);
+  };
+  
   const handleSave = () => {
-    // For holiday on Saturday, special case of +4 hours
     let calculatedBalanceMinutes = balanceMinutes;
     
     if (isHoliday) {
       const dayOfWeek = getDay(new Date(date));
-      if (dayOfWeek === 6) { // Saturday
-        calculatedBalanceMinutes = 240; // +4 hours
-      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Weekday
-        calculatedBalanceMinutes = -50; // -50 minutes
-      } else { // Sunday
+      if (dayOfWeek === 6) {
+        calculatedBalanceMinutes = 240;
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        calculatedBalanceMinutes = -50;
+      } else {
         calculatedBalanceMinutes = 0;
       }
     }
@@ -188,6 +201,11 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       lunchOut: formatTime(lunchOut),
       lunchIn: formatTime(lunchIn),
       exit: formatTime(exit),
+      breaks: breaks.map(b => ({
+        ...b,
+        exitTime: formatTime(b.exitTime),
+        returnTime: formatTime(b.returnTime)
+      })),
       workedMinutes,
       balanceMinutes: calculatedBalanceMinutes,
       isHoliday,
@@ -200,7 +218,6 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     onBack();
   };
   
-  // Format date for display - fixing date display issue
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -208,13 +225,11 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
       month: 'long', 
       day: 'numeric' 
     };
-    // Create a proper Date object from the string
     const dateParts = dateString.split('-').map(Number);
     const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
     return dateObj.toLocaleDateString('pt-BR', options);
   };
   
-  // Copy default schedule values
   const copyDefaultSchedule = () => {
     setEntry(workSchedule.entry);
     setLunchOut(workSchedule.lunchOut);
@@ -222,9 +237,8 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     setExit(workSchedule.exit);
   };
 
-  // Get day of week to check if it's a working day or weekend
   const dayOfWeek = getDay(new Date(date));
-  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6); // Sunday or Saturday
+  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
   
   return (
     <Card className="w-full card-gradient animate-slide-up">
@@ -316,80 +330,176 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
         </div>
         
         {!isHoliday && !isVacation && !isAtestado && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="entry" className="flex items-center justify-between">
-                <span>Entrada</span>
-                {isToday && (
-                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('entry')} className="h-6 px-2">
-                    <Clock className="h-3 w-3 mr-1" /> Agora
-                  </Button>
-                )}
-              </Label>
-              <Input
-                id="entry"
-                value={entry}
-                onChange={(e) => setEntry(e.target.value)}
-                onBlur={(e) => handleTimeBlur(e.target.value, setEntry)}
-                placeholder="08:00"
-                className="input-time"
-              />
+          <>
+            {/* Main time entries */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="entry" className="flex items-center justify-between">
+                  <span>Entrada</span>
+                  {isToday && (
+                    <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('entry')} className="h-6 px-2">
+                      <Clock className="h-3 w-3 mr-1" /> Agora
+                    </Button>
+                  )}
+                </Label>
+                <Input
+                  id="entry"
+                  value={entry}
+                  onChange={(e) => setEntry(e.target.value)}
+                  onBlur={(e) => handleTimeBlur(e.target.value, setEntry)}
+                  placeholder="08:00"
+                  className="input-time"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lunch-out" className="flex items-center justify-between">
+                  <span>Saída Almoço</span>
+                  {isToday && (
+                    <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('lunchOut')} className="h-6 px-2">
+                      <Clock className="h-3 w-3 mr-1" /> Agora
+                    </Button>
+                  )}
+                </Label>
+                <Input
+                  id="lunch-out"
+                  value={lunchOut}
+                  onChange={(e) => setLunchOut(e.target.value)}
+                  onBlur={(e) => handleTimeBlur(e.target.value, setLunchOut)}
+                  placeholder="12:00"
+                  className="input-time"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lunch-in" className="flex items-center justify-between">
+                  <span>Retorno Almoço</span>
+                  {isToday && (
+                    <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('lunchIn')} className="h-6 px-2">
+                      <Clock className="h-3 w-3 mr-1" /> Agora
+                    </Button>
+                  )}
+                </Label>
+                <Input
+                  id="lunch-in"
+                  value={lunchIn}
+                  onChange={(e) => setLunchIn(e.target.value)}
+                  onBlur={(e) => handleTimeBlur(e.target.value, setLunchIn)}
+                  placeholder="13:00"
+                  className="input-time"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="exit" className="flex items-center justify-between">
+                  <span>Saída Final</span>
+                  {isToday && (
+                    <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('exit')} className="h-6 px-2">
+                      <Clock className="h-3 w-3 mr-1" /> Agora
+                    </Button>
+                  )}
+                </Label>
+                <Input
+                  id="exit"
+                  value={exit}
+                  onChange={(e) => setExit(e.target.value)}
+                  onBlur={(e) => handleTimeBlur(e.target.value, setExit)}
+                  placeholder="17:00"
+                  className="input-time"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="lunch-out" className="flex items-center justify-between">
-                <span>Saída Almoço</span>
-                {isToday && (
-                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('lunchOut')} className="h-6 px-2">
-                    <Clock className="h-3 w-3 mr-1" /> Agora
-                  </Button>
-                )}
-              </Label>
-              <Input
-                id="lunch-out"
-                value={lunchOut}
-                onChange={(e) => setLunchOut(e.target.value)}
-                onBlur={(e) => handleTimeBlur(e.target.value, setLunchOut)}
-                placeholder="12:00"
-                className="input-time"
-              />
+            
+            {/* Additional breaks section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm text-gray-400">Intervalos Adicionais</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addBreak}
+                  className="text-cyanBlue border-cyanBlue/30 hover:bg-cyanBlue/10"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar Intervalo
+                </Button>
+              </div>
+              
+              {breaks.length === 0 && (
+                <p className="text-xs text-gray-500 italic">
+                  Nenhum intervalo adicional. Use para registrar saídas durante o expediente (banco, médico, etc.)
+                </p>
+              )}
+              
+              {breaks.map((breakItem, index) => (
+                <div key={breakItem.id} className="bg-gray-800/30 rounded-lg p-3 space-y-3 border border-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-300">
+                      Intervalo {index + 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeBreak(breakItem.id)}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-900/20 h-7 px-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center justify-between">
+                        <span>Saída</span>
+                        {isToday && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => fillBreakCurrentTime(breakItem.id, 'exitTime')} 
+                            className="h-5 px-1 text-xs"
+                          >
+                            <Clock className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </Label>
+                      <Input
+                        value={breakItem.exitTime}
+                        onChange={(e) => updateBreak(breakItem.id, 'exitTime', e.target.value)}
+                        onBlur={(e) => updateBreak(breakItem.id, 'exitTime', formatTime(e.target.value))}
+                        placeholder="10:00"
+                        className="input-time h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center justify-between">
+                        <span>Retorno</span>
+                        {isToday && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => fillBreakCurrentTime(breakItem.id, 'returnTime')} 
+                            className="h-5 px-1 text-xs"
+                          >
+                            <Clock className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </Label>
+                      <Input
+                        value={breakItem.returnTime}
+                        onChange={(e) => updateBreak(breakItem.id, 'returnTime', e.target.value)}
+                        onBlur={(e) => updateBreak(breakItem.id, 'returnTime', formatTime(e.target.value))}
+                        placeholder="10:30"
+                        className="input-time h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Input
+                    value={breakItem.reason || ""}
+                    onChange={(e) => updateBreak(breakItem.id, 'reason', e.target.value)}
+                    placeholder="Motivo (opcional): banco, médico, etc."
+                    className="bg-gray-800/50 border-gray-700 h-8 text-sm"
+                  />
+                </div>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="lunch-in" className="flex items-center justify-between">
-                <span>Retorno Almoço</span>
-                {isToday && (
-                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('lunchIn')} className="h-6 px-2">
-                    <Clock className="h-3 w-3 mr-1" /> Agora
-                  </Button>
-                )}
-              </Label>
-              <Input
-                id="lunch-in"
-                value={lunchIn}
-                onChange={(e) => setLunchIn(e.target.value)}
-                onBlur={(e) => handleTimeBlur(e.target.value, setLunchIn)}
-                placeholder="13:00"
-                className="input-time"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="exit" className="flex items-center justify-between">
-                <span>Saída</span>
-                {isToday && (
-                  <Button variant="ghost" size="sm" onClick={() => fillCurrentTime('exit')} className="h-6 px-2">
-                    <Clock className="h-3 w-3 mr-1" /> Agora
-                  </Button>
-                )}
-              </Label>
-              <Input
-                id="exit"
-                value={exit}
-                onChange={(e) => setExit(e.target.value)}
-                onBlur={(e) => handleTimeBlur(e.target.value, setExit)}
-                placeholder="17:00"
-                className="input-time"
-              />
-            </div>
-          </div>
+          </>
         )}
         
         <div className="space-y-2">

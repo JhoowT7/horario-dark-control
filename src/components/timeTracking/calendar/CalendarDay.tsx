@@ -3,6 +3,7 @@ import React from "react";
 import { format, isToday } from "date-fns";
 import { TimeEntry } from "@/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Check } from "lucide-react";
 
 interface CalendarDayProps {
   day: Date;
@@ -59,7 +60,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     } else if (entry.balanceMinutes < 0) {
       dayClass += " bg-negative/10";
     } else {
-      dayClass += " bg-gray-800/30";
+      // Zero balance - has entry but neutral
+      dayClass += " bg-cyanBlue/5 border border-cyanBlue/20";
     }
   } else if (isMissingEntry) {
     dayClass += " bg-negative/5 border border-negative/20";
@@ -89,11 +91,10 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
             <div className="text-sm">{format(day, "d")}</div>
             
             {entry && (
-              <div className={`text-xs mt-1 ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : ''}`}>
-                {entry.balanceMinutes !== 0 && (
-                  entry.balanceMinutes > 0 ? "+" : "-"
-                )}
-                {entry.balanceMinutes !== 0 && minutesToTime(Math.abs(entry.balanceMinutes))}
+              <div className={`text-xs mt-1 ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : 'text-cyanBlue/70'}`}>
+                {entry.balanceMinutes > 0 && `+${minutesToTime(entry.balanceMinutes)}`}
+                {entry.balanceMinutes < 0 && `-${minutesToTime(Math.abs(entry.balanceMinutes))}`}
+                {entry.balanceMinutes === 0 && <Check className="w-3 h-3 mx-auto" />}
               </div>
             )}
             

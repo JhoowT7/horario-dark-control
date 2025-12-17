@@ -81,23 +81,33 @@ export const minutesToTime = (minutes: number): string => {
   return `${isNegative ? "-" : ""}${formattedHours}:${formattedMins}`;
 };
 
-// Calculate work hours for a day
+// Break/interval interface for calculation
+interface BreakInterval {
+  exitTime: string;
+  returnTime: string;
+}
+
+// Calculate work hours for a day with support for multiple breaks
 export const calculateWorkHours = (
   entry: string,
   lunchOut: string,
   lunchIn: string,
   exit: string,
-  toleranceMinutes: number = 5
+  toleranceMinutes: number = 5,
+  additionalBreaks?: BreakInterval[]
 ): { workMinutes: number; message: string } => {
   // If any field is empty, consider as absence
   if (!entry || !exit) {
     return { workMinutes: 0, message: "Ausência registrada" };
   }
   
-  let entryMin = timeToMinutes(entry);
+  const entryMin = timeToMinutes(entry);
   const exitMin = timeToMinutes(exit);
   
-  // If lunch times are provided, calculate with lunch break
+  // Collect all breaks (lunch + additional)
+  const allBreaks: { start: number; end: number }[] = [];
+  
+  // Add lunch break if provided
   if (lunchOut && lunchIn) {
     const lunchOutMin = timeToMinutes(lunchOut);
     const lunchInMin = timeToMinutes(lunchIn);
@@ -107,13 +117,44 @@ export const calculateWorkHours = (
       return { workMinutes: 0, message: "Horários de almoço inválidos" };
     }
     
-    const morningMinutes = lunchOutMin - entryMin;
-    const afternoonMinutes = exitMin - lunchInMin;
-    return { workMinutes: morningMinutes + afternoonMinutes, message: "OK" };
+    allBreaks.push({ start: lunchOutMin, end: lunchInMin });
   }
   
-  // Calculate without lunch break
-  return { workMinutes: exitMin - entryMin, message: "OK" };
+  // Add additional breaks
+  if (additionalBreaks && additionalBreaks.length > 0) {
+    for (const breakItem of additionalBreaks) {
+      if (breakItem.exitTime && breakItem.returnTime) {
+        const breakStart = timeToMinutes(breakItem.exitTime);
+        const breakEnd = timeToMinutes(breakItem.returnTime);
+        
+        // Validate break times
+        if (breakStart < entryMin || breakEnd > exitMin || breakEnd <= breakStart) {
+          return { workMinutes: 0, message: "Horários de intervalo inválidos" };
+        }
+        
+        allBreaks.push({ start: breakStart, end: breakEnd });
+      }
+    }
+  }
+  
+  // Sort breaks by start time
+  allBreaks.sort((a, b) => a.start - b.start);
+  
+  // Check for overlapping breaks
+  for (let i = 0; i < allBreaks.length - 1; i++) {
+    if (allBreaks[i].end > allBreaks[i + 1].start) {
+      return { workMinutes: 0, message: "Intervalos sobrepostos detectados" };
+    }
+  }
+  
+  // Calculate total break time
+  const totalBreakMinutes = allBreaks.reduce((sum, b) => sum + (b.end - b.start), 0);
+  
+  // Calculate work minutes
+  const totalMinutes = exitMin - entryMin;
+  const workMinutes = totalMinutes - totalBreakMinutes;
+  
+  return { workMinutes, message: "OK" };
 };
 
 // Calculate balance for a day

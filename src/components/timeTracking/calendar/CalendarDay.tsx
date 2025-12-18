@@ -1,9 +1,10 @@
 
 import React from "react";
+import { motion } from "framer-motion";
 import { format, isToday } from "date-fns";
 import { TimeEntry } from "@/types";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check } from "lucide-react";
+import { Check, AlertTriangle, X } from "lucide-react";
 
 interface CalendarDayProps {
   day: Date;
@@ -40,13 +41,16 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
   onSelectDate
 }) => {
   // Determine day styling
-  let dayClass = "p-2 rounded-md transition-colors cursor-pointer"; // Always cursor-pointer
+  let dayClass = "p-2 rounded-md transition-all duration-200 cursor-pointer min-h-[60px] min-w-[44px] touch-manipulation"; // Touch target 44x44
   
   if (isToday(day)) {
-    dayClass += " border border-cyanBlue/50";
+    dayClass += " border-2 border-cyanBlue ring-2 ring-cyanBlue/20";
   } else {
-    dayClass += " hover:bg-gray-800";
+    dayClass += " hover:bg-gray-700/50 hover:scale-105 hover:shadow-lg";
   }
+  
+  // Pulsing effect for negative balance days
+  const hasNegativeBalance = entry && entry.balanceMinutes < 0;
   
   if (isVacation || entry?.isVacation) {
     dayClass += " bg-cyanBlue/10";
@@ -78,53 +82,94 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
     e.stopPropagation();
     onSelectDate(dateStr);
   };
+
+  // Get status icon
+  const getStatusIcon = () => {
+    if (isVacation || entry?.isVacation || isAtestado || entry?.isAtestado || isHoliday || entry?.isHoliday) {
+      return null;
+    }
+    
+    if (entry && entry.balanceMinutes === 0) {
+      return <Check className="w-3 h-3 text-cyanBlue" aria-label="Jornada completa" />;
+    }
+    
+    if (isMissingEntry && !entry) {
+      return <X className="w-3 h-3 text-negative" aria-label="Ausente" />;
+    }
+    
+    if (entry && entry.balanceMinutes < 0) {
+      return <AlertTriangle className="w-3 h-3 text-negative" aria-label="Saldo negativo" />;
+    }
+    
+    return null;
+  };
   
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <motion.button
             className={dayClass}
             onClick={handleDayClick}
             type="button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label={`${tooltipText}${entry ? ` - Saldo: ${entry.balanceMinutes > 0 ? '+' : ''}${minutesToTime(entry.balanceMinutes)}` : isMissingEntry ? ' - Pendente' : ''}`}
           >
-            <div className="text-sm">{format(day, "d")}</div>
+            <div className="text-sm font-medium">{format(day, "d")}</div>
             
-            {entry && !entry.isHoliday && !entry.isVacation && !entry.isAtestado && !isHoliday && !isVacation && !isAtestado && (
-              <div className={`text-xs mt-1 ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : 'text-cyanBlue/70'}`}>
-                {entry.balanceMinutes > 0 && `+${minutesToTime(entry.balanceMinutes)}`}
-                {entry.balanceMinutes < 0 && `-${minutesToTime(Math.abs(entry.balanceMinutes))}`}
-                {entry.balanceMinutes === 0 && <Check className="w-3 h-3 mx-auto" />}
-              </div>
-            )}
-            
-            {(isHoliday || entry?.isHoliday) && !isVacation && !entry?.isVacation && !isAtestado && !entry?.isAtestado && (
-              <div className="text-xs mt-1 text-gray-400">
-                Feriado
-              </div>
-            )}
-            
-            {(isVacation || entry?.isVacation) && (
-              <div className="text-xs mt-1 text-cyanBlue/80">
-                Férias
-              </div>
-            )}
-            
-            {(isAtestado || entry?.isAtestado) && (
-              <div className="text-xs mt-1 text-orange-400">
-                Atestado
-              </div>
-            )}
-            
-            {isMissingEntry && !entry && (
-              <div className="text-xs mt-1 text-negative">
-                -{minutesToTime(expectedMinutesPerDay)} 
-              </div>
-            )}
-          </button>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              {entry && !entry.isHoliday && !entry.isVacation && !entry.isAtestado && !isHoliday && !isVacation && !isAtestado && (
+                <motion.div 
+                  className={`text-xs ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : 'text-cyanBlue/70'}`}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: 0,
+                    scale: hasNegativeBalance ? [1, 1.05, 1] : 1
+                  }}
+                  transition={hasNegativeBalance ? { repeat: Infinity, duration: 2 } : {}}
+                >
+                  {entry.balanceMinutes > 0 && `+${minutesToTime(entry.balanceMinutes)}`}
+                  {entry.balanceMinutes < 0 && `-${minutesToTime(Math.abs(entry.balanceMinutes))}`}
+                  {entry.balanceMinutes === 0 && getStatusIcon()}
+                </motion.div>
+              )}
+              
+              {(isHoliday || entry?.isHoliday) && !isVacation && !entry?.isVacation && !isAtestado && !entry?.isAtestado && (
+                <div className="text-xs text-gray-400">🎉</div>
+              )}
+              
+              {(isVacation || entry?.isVacation) && (
+                <div className="text-xs text-cyanBlue/80">🏖️</div>
+              )}
+              
+              {(isAtestado || entry?.isAtestado) && (
+                <div className="text-xs text-orange-400">🏥</div>
+              )}
+              
+              {isMissingEntry && !entry && (
+                <motion.div 
+                  className="text-xs text-negative flex items-center gap-1"
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  {getStatusIcon()}
+                </motion.div>
+              )}
+            </div>
+          </motion.button>
         </TooltipTrigger>
-        <TooltipContent>
-          {tooltipText}
+        <TooltipContent className="bg-card border-border">
+          <p>{tooltipText}</p>
+          {entry && (
+            <p className={entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : 'text-cyanBlue'}>
+              Saldo: {entry.balanceMinutes > 0 ? '+' : ''}{minutesToTime(entry.balanceMinutes)}
+            </p>
+          )}
+          {isMissingEntry && !entry && (
+            <p className="text-negative">Pendente: -{minutesToTime(expectedMinutesPerDay)}</p>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

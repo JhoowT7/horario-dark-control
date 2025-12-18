@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "@/contexts/AppContext";
 import { Employee, TimeEntry, WorkBreak } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -7,13 +8,15 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowUp, ArrowDown, Calendar, Copy, Save, X, Clock, CalendarClock, Plus, Trash2, HelpCircle, AlertCircle, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ArrowUp, ArrowDown, Calendar, Copy, Save, X, Clock, CalendarClock, Plus, Trash2, HelpCircle, AlertCircle, Check, Keyboard } from "lucide-react";
 import { formatTime, timeToMinutes, minutesToTime, calculateWorkHours, calculateDayBalance } from "@/utils/timeUtils";
 import { parseISO, differenceInCalendarDays, getDay } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
+import Confetti from "@/components/ui/confetti";
 
 interface TimeEntryFormProps {
   employee: Employee;
@@ -50,10 +53,23 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
   
   const isToday = date === getCurrentDate();
   const daysFromToday = differenceInCalendarDays(parseISO(date), parseISO(getCurrentDate()));
+  
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onSave: () => {
+      if (!isSaving && Object.keys(validationErrors).length === 0) {
+        handleSave();
+      }
+    },
+    onEscape: onBack,
+    enabled: true
+  });
   
   const handleTimeBlur = (value: string, setter: (value: string) => void) => {
     setter(formatTime(value));
@@ -338,12 +354,25 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
     localStorage.removeItem(`timeentry_backup_${employee.id}_${date}`);
     setHasUnsavedChanges(false);
     
-    toast.success("Registro salvo", {
-      description: `${formatDate(date)} - ${employee.name}`
-    });
+    // Check for perfect 8h day (480 minutes = 8 hours, 0 balance)
+    if (balanceMinutes === 0 && workedMinutes === employee.expectedMinutesPerDay) {
+      setShowConfetti(true);
+      toast.success("🎉 Jornada perfeita!", {
+        description: `Exatamente ${minutesToTime(employee.expectedMinutesPerDay)} trabalhadas!`
+      });
+    } else {
+      toast.success("Registro salvo", {
+        description: `${formatDate(date)} - ${employee.name}`
+      });
+    }
     
     setIsSaving(false);
-    onBack();
+    
+    // Delay onBack to show confetti
+    setTimeout(() => {
+      setShowConfetti(false);
+      onBack();
+    }, showConfetti ? 2000 : 300);
   };
   
   const formatDate = (dateString: string) => {
@@ -368,8 +397,19 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
   const dayOfWeek = getDay(new Date(date));
   const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
   
+  // Perfect journey check (8h exactly)
+  const isPerfectJourney = balanceMinutes === 0 && workedMinutes === employee.expectedMinutesPerDay;
+  
   return (
-    <Card className="w-full card-gradient animate-slide-up">
+    <>
+      <Confetti active={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="w-full card-gradient">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div>
@@ -759,23 +799,36 @@ const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ employee, date, onBack })
           )}
         </div>
         
-        <Button 
-          onClick={handleSave} 
-          disabled={isSaving || Object.keys(validationErrors).length > 0}
-          className={`bg-cyanBlue hover:bg-cyanBlue/90 text-black transition-all ${isSaving ? 'animate-save-success' : ''}`}
-        >
-          {isSaving ? (
-            <>
-              <Check className="h-4 w-4 mr-2 animate-fade-in" /> Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" /> Salvar
-            </>
-          )}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                ref={saveButtonRef}
+                onClick={handleSave} 
+                disabled={isSaving || Object.keys(validationErrors).length > 0}
+                className={`bg-cyanBlue hover:bg-cyanBlue/90 text-black transition-all ripple ${isSaving ? 'animate-save-success' : ''}`}
+                aria-label="Salvar registro (Ctrl+S)"
+              >
+                {isSaving ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2 animate-fade-in" /> Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" /> Salvar
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Atalho: <Badge variant="outline" className="ml-1 text-xs">Ctrl+S</Badge></p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </CardFooter>
     </Card>
+      </motion.div>
+    </>
   );
 };
 

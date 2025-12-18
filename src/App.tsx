@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { AppProvider, useAppContext } from "./contexts/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
@@ -38,10 +39,10 @@ const AppContent = () => {
     setSelectedDate(getCurrentDate());
   }, []);
   
-  // Reset entry form view when employee or date changes
+  // Reset entry form view only when employee changes (NOT date - fixes double-click bug)
   useEffect(() => {
     setShowEntryForm(false);
-  }, [selectedEmployee, selectedDate]);
+  }, [selectedEmployee]);
   
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
@@ -122,22 +123,40 @@ const AppContent = () => {
         </TabsList>
         
         <TabsContent value="timeTracking" className="space-y-6">
-          {!showEntryForm ? (
-            selectedEmployee && (
-              <TimeTrackingSummary
-                employee={selectedEmployee}
-                onSelectDate={handleSelectDate}
-              />
-            )
-          ) : (
-            selectedEmployee && (
-              <TimeEntryForm
-                employee={selectedEmployee}
-                date={selectedDate}
-                onBack={handleBackFromEntryForm}
-              />
-            )
-          )}
+          <AnimatePresence mode="wait">
+            {!showEntryForm ? (
+              selectedEmployee && (
+                <motion.div
+                  key="summary"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TimeTrackingSummary
+                    employee={selectedEmployee}
+                    onSelectDate={handleSelectDate}
+                  />
+                </motion.div>
+              )
+            ) : (
+              selectedEmployee && (
+                <motion.div
+                  key="form"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TimeEntryForm
+                    employee={selectedEmployee}
+                    date={selectedDate}
+                    onBack={handleBackFromEntryForm}
+                  />
+                </motion.div>
+              )
+            )}
+          </AnimatePresence>
         </TabsContent>
         
         <TabsContent value="employees">

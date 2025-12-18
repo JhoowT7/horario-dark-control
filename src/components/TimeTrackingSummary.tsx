@@ -21,6 +21,7 @@ import EntriesList from "./timeTracking/EntriesList";
 import MissingEntriesList from "./timeTracking/MissingEntriesList";
 import MonthSummary from "./timeTracking/MonthSummary";
 import DocumentRequests from "./DocumentRequests";
+import TimeTrackingSkeleton from "./timeTracking/TimeTrackingSkeleton";
 import { formatDateString, isWorkingDay } from "./timeTracking/DateUtils";
 
 interface TimeTrackingSummaryProps {
@@ -29,6 +30,7 @@ interface TimeTrackingSummaryProps {
 }
 
 const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onSelectDate }) => {
+  const [isLoading, setIsLoading] = useState(true);
   const { 
     timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, 
     getAccumulatedBalance, isDateInVacation, resetMonthBalance
@@ -60,6 +62,9 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   useEffect(() => {
     // Set current month to today's date
     setCurrentMonth(today);
+    // Simulate initial load
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
   }, []);
   
   // Calculate balances and missing entries
@@ -206,9 +211,13 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     resetMonthBalance(employee.id, monthString);
   };
   
+  if (isLoading) {
+    return <TimeTrackingSkeleton />;
+  }
+
   return (
     <TooltipProvider>
-      <Card className="w-full card-gradient animate-slide-up">
+      <Card className="w-full card-gradient animate-fade-in">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <CardTitle className="text-lg md:text-xl">

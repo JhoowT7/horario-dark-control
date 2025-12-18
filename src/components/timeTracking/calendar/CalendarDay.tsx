@@ -90,7 +90,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({
           >
             <div className="text-sm">{format(day, "d")}</div>
             
-            {entry && (
+            {entry && !entry.isHoliday && !entry.isVacation && !entry.isAtestado && !isHoliday && !isVacation && !isAtestado && (
               <div className={`text-xs mt-1 ${entry.balanceMinutes > 0 ? 'text-positive' : entry.balanceMinutes < 0 ? 'text-negative' : 'text-cyanBlue/70'}`}>
                 {entry.balanceMinutes > 0 && `+${minutesToTime(entry.balanceMinutes)}`}
                 {entry.balanceMinutes < 0 && `-${minutesToTime(Math.abs(entry.balanceMinutes))}`}

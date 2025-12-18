@@ -7,9 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { generateBalanceMessage } from "@/utils/timeUtils";
-import { 
-  format, startOfMonth, endOfMonth, eachDayOfInterval,
-  addMonths, subMonths, parseISO, isSameMonth
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  addMonths,
+  subMonths,
+  parseISO,
+  isSameMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +27,6 @@ import EntriesList from "./timeTracking/EntriesList";
 import MissingEntriesList from "./timeTracking/MissingEntriesList";
 import MonthSummary from "./timeTracking/MonthSummary";
 import DocumentRequests from "./DocumentRequests";
-import TimeTrackingSkeleton from "./timeTracking/TimeTrackingSkeleton";
 import { formatDateString, isWorkingDay } from "./timeTracking/DateUtils";
 
 interface TimeTrackingSummaryProps {
@@ -30,8 +35,7 @@ interface TimeTrackingSummaryProps {
 }
 
 const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onSelectDate }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const { 
+  const {
     timeEntries, settings, getCurrentDate, getMonthBalanceForEmployee, 
     getAccumulatedBalance, isDateInVacation, resetMonthBalance
   } = useAppContext();
@@ -62,9 +66,6 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
   useEffect(() => {
     // Set current month to today's date
     setCurrentMonth(today);
-    // Simulate initial load
-    const timer = setTimeout(() => setIsLoading(false), 300);
-    return () => clearTimeout(timer);
   }, []);
   
   // Calculate balances and missing entries
@@ -211,10 +212,6 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ employee, onS
     resetMonthBalance(employee.id, monthString);
   };
   
-  if (isLoading) {
-    return <TimeTrackingSkeleton />;
-  }
-
   return (
     <TooltipProvider>
       <Card className="w-full card-gradient animate-fade-in">
